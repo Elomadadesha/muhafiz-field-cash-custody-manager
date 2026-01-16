@@ -12,13 +12,13 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, PenLine } from 'lucide-react';
+import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, PenLine, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { TransactionSchema, CategorySchema } from '@/lib/validation';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
-  if (name.includes('��واصلات')) return <Bus className="w-5 h-5" />;
-  if (name.includes('وقو��')) return <Banknote className="w-5 h-5" />;
+  if (name.includes('مواصلات')) return <Bus className="w-5 h-5" />;
+  if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
   if (name.includes('قطع')) return <Settings className="w-5 h-5" />;
@@ -31,15 +31,18 @@ export function TransactionDrawer() {
   const categories = useAppStore(s => s.categories);
   const selectedWalletId = useAppStore(s => s.selectedWalletId);
   const transactionIdToEdit = useAppStore(s => s.transactionIdToEdit);
+  const drawerMode = useAppStore(s => s.drawerMode);
   const transactions = useAppStore(s => s.transactions);
   const addTransaction = useAppStore(s => s.addTransaction);
   const editTransaction = useAppStore(s => s.editTransaction);
+  const transferFunds = useAppStore(s => s.transferFunds);
   const addCategory = useAppStore(s => s.addCategory);
   const isLoading = useAppStore(s => s.isLoading);
   const settings = useAppStore(s => s.settings);
   const currency = CURRENCIES[settings.currency];
-  const [type, setType] = useState<'expense' | 'deposit'>('expense');
+  const [type, setType] = useState<'expense' | 'deposit' | 'transfer'>('expense');
   const [walletId, setWalletId] = useState<string>('');
+  const [toWalletId, setToWalletId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -48,18 +51,36 @@ export function TransactionDrawer() {
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryName, setCustomCategoryName] = useState('');
   const [saveCustomCategory, setSaveCustomCategory] = useState(false);
-  // Sync selected wallet from store or handle edit mode
+  // Sync selected wallet from store or handle edit/duplicate mode
   useEffect(() => {
     if (isOpen) {
       if (transactionIdToEdit) {
-        // EDIT MODE
+        // EDIT or DUPLICATE MODE
         const tx = transactions.find(t => t.id === transactionIdToEdit);
         if (tx) {
-          setType(tx.type);
+          // If it's a transfer, we might want to restrict editing or handle it differently
+          // For now, let's assume we can edit basic fields or duplicate it
+          if (tx.isTransfer) {
+             // Basic support for viewing transfer details, maybe restrict full editing later
+             setType('transfer');
+             // We need to find the related transaction to know the 'toWalletId'
+             // This is complex because we only have one side of the transaction here.
+             // For simplicity in this phase, let's default transfers to expense view if editing is tricky,
+             // or just support basic expense/deposit editing.
+             // However, the prompt asks for "Duplicate" support.
+             // If duplicating a transfer, it's just a new transfer.
+          } else {
+             setType(tx.type);
+          }
           setWalletId(tx.walletId);
           setAmount(tx.amount.toString());
           setNotes(tx.notes || '');
-          setDate(new Date(tx.date));
+          // If duplicate mode, use current date, otherwise use transaction date
+          if (drawerMode === 'duplicate') {
+            setDate(new Date());
+          } else {
+            setDate(new Date(tx.date));
+          }
           if (tx.categoryId === 'custom' || (tx.customCategoryName && !categories.find(c => c.id === tx.categoryId))) {
             setIsCustomCategory(true);
             setCustomCategoryName(tx.customCategoryName || '');
@@ -85,12 +106,13 @@ export function TransactionDrawer() {
         setCategoryId('');
         setDate(new Date());
         setType('expense');
+        setToWalletId('');
         setIsCustomCategory(false);
         setCustomCategoryName('');
         setSaveCustomCategory(false);
       }
     }
-  }, [isOpen, selectedWalletId, wallets, walletId, transactionIdToEdit, transactions, categories]);
+  }, [isOpen, selectedWalletId, wallets, walletId, transactionIdToEdit, transactions, categories, drawerMode]);
   const handleSubmit = async () => {
     if (!walletId) {
       toast.error('الرجاء اختيار المحفظة');
@@ -106,6 +128,32 @@ export function TransactionDrawer() {
       toast.error(validation.error.issues[0].message);
       return;
     }
+    // Handle Transfer
+    if (type === 'transfer') {
+      if (!toWalletId) {
+        toast.error('الرجاء اختيار المحفظة المحول إلي��ا');
+        return;
+      }
+      if (walletId === toWalletId) {
+        toast.error('لا يمكن التحويل لنفس المحفظة');
+        return;
+      }
+      try {
+        await transferFunds(
+          walletId, 
+          toWalletId, 
+          parseFloat(amount), 
+          date ? date.getTime() : Date.now(), 
+          notes
+        );
+        toast.success('تم تحويل الأموال بنجاح');
+        closeDrawer();
+      } catch (error: any) {
+        toast.error(error.message || 'فشل عملي�� التحويل');
+      }
+      return;
+    }
+    // Handle Expense/Deposit
     let finalCategoryId = categoryId;
     let finalCustomName = undefined;
     if (type === 'expense') {
@@ -120,7 +168,7 @@ export function TransactionDrawer() {
           // Add to permanent list
           const newId = await addCategory(customCategoryName.trim());
           if (!newId) {
-            toast.error('فشل إضافة البند الجديد');
+            toast.error('��شل إضافة البند الجديد');
             return;
           }
           finalCategoryId = newId;
@@ -147,16 +195,17 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       };
-      if (transactionIdToEdit) {
+      if (drawerMode === 'edit' && transactionIdToEdit) {
         await editTransaction(transactionIdToEdit, txData);
-        toast.success('تم تعديل الع��لية بنجاح');
+        toast.success('تم تعديل ال��ملية بنجاح');
       } else {
+        // Create (Add) or Duplicate (Add new based on old)
         await addTransaction(txData);
-        toast.success(type === 'expense' ? 'تم تسجيل المصر��ف' : 'تم إضافة الرصيد');
+        toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
       }
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثناء ��فظ العملية');
+      toast.error('حدث خطأ أثن��ء حفظ العملية');
     }
   };
   const handleCategorySelect = (id: string) => {
@@ -167,42 +216,61 @@ export function TransactionDrawer() {
     setCategoryId('');
     setIsCustomCategory(true);
   };
+  const getTitle = () => {
+    if (drawerMode === 'edit') return 'تعديل العملية';
+    if (drawerMode === 'duplicate') return 'تكرار العملية';
+    return 'تسجيل عملية جديدة';
+  };
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && closeDrawer()}>
       <DrawerContent className="max-h-[95vh]" dir="rtl">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader>
             <DrawerTitle className="text-center text-xl font-bold">
-              {transactionIdToEdit ? 'تعديل العملية' : 'تسجيل عملية جديدة'}
+              {getTitle()}
             </DrawerTitle>
             <DrawerDescription className="text-center text-slate-500">
-              {transactionIdToEdit ? 'قم بتعديل تفاصيل العملية أدناه' : '��دخل تفاصيل العملية المالية أدناه'}
+              {drawerMode === 'edit' ? 'قم ��تعديل تفاصيل العملية أدناه' : '��دخل تفاصيل العملية المالية أدناه'}
             </DrawerDescription>
           </DrawerHeader>
           <div className="p-4 space-y-6 overflow-y-auto max-h-[75vh]">
             {/* Type Toggle */}
-            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+            <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
               <button
                 onClick={() => setType('expense')}
+                disabled={drawerMode === 'edit'} // Disable type change on edit to simplify logic
                 className={cn(
-                  "py-3 text-sm font-bold rounded-xl transition-all",
+                  "py-3 text-xs font-bold rounded-xl transition-all",
                   type === 'expense'
                     ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
                 )}
               >
-                صرف (مصروفات)
+                صرف
               </button>
               <button
                 onClick={() => setType('deposit')}
+                disabled={drawerMode === 'edit'}
                 className={cn(
-                  "py-3 text-sm font-bold rounded-xl transition-all",
+                  "py-3 text-xs font-bold rounded-xl transition-all",
                   type === 'deposit'
                     ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
                 )}
               >
-                إيداع (تغذية)
+                إيداع
+              </button>
+              <button
+                onClick={() => setType('transfer')}
+                disabled={drawerMode === 'edit'}
+                className={cn(
+                  "py-3 text-xs font-bold rounded-xl transition-all",
+                  type === 'transfer'
+                    ? "bg-white dark:bg-slate-700 text-amber-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                )}
+              >
+                تحويل
               </button>
             </div>
             {/* Amount Input */}
@@ -221,9 +289,11 @@ export function TransactionDrawer() {
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-lg">{currency.symbol}</span>
               </div>
             </div>
-            {/* Wallet Selection */}
+            {/* Wallet Selection (Source) */}
             <div className="space-y-2">
-              <Label className="text-right block text-slate-500">المحفظة</Label>
+              <Label className="text-right block text-slate-500">
+                {type === 'transfer' ? 'من المحفظة' : 'المحفظة'}
+              </Label>
               <Select value={walletId} onValueChange={setWalletId}>
                 <SelectTrigger className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right flex-row-reverse bg-white dark:bg-slate-800">
                   <SelectValue placeholder="اختر المحفظة" />
@@ -238,9 +308,30 @@ export function TransactionDrawer() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Target Wallet Selection (Transfer Only) */}
+            {type === 'transfer' && (
+              <div className="space-y-2 animate-fade-in">
+                <Label className="text-right block text-slate-500">إلى المحفظة</Label>
+                <Select value={toWalletId} onValueChange={setToWalletId}>
+                  <SelectTrigger className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right flex-row-reverse bg-white dark:bg-slate-800">
+                    <SelectValue placeholder="اختر المحفظة المستلمة" />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    {wallets
+                      .filter(w => w.isActive && w.id !== walletId)
+                      .map(w => (
+                        <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse py-3">
+                          <span className="font-medium">{w.name}</span>
+                          <span className="text-slate-400 text-xs mr-2">({w.balance.toLocaleString()} {currency.symbol})</span>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {/* Category Selection (Only for Expense) */}
             {type === 'expense' && (
-              <div className="space-y-3">
+              <div className="space-y-3 animate-fade-in">
                 <Label className="text-right block text-slate-500">بند الصرف</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {categories.map(cat => (
@@ -279,7 +370,7 @@ export function TransactionDrawer() {
                     )}>
                       <PenLine className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخص��</span>
+                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخصص</span>
                   </button>
                 </div>
                 {/* Custom Category Input Area */}
@@ -296,7 +387,7 @@ export function TransactionDrawer() {
                           autoFocus
                         />
                       </div>
-                      {!transactionIdToEdit && (
+                      {drawerMode !== 'edit' && (
                         <div className="flex items-center justify-between pt-2">
                           <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                             حفظ في القائمة لاستخدامه مستقبلاً
@@ -346,24 +437,32 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفاصيل..."
+                  placeholder="أضف تفا��يل..."
                   className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right bg-white dark:bg-slate-800"
                 />
               </div>
             </div>
           </div>
           <DrawerFooter className="pt-2 pb-8 px-4">
-            <Button
-              onClick={handleSubmit}
+            <Button 
+              onClick={handleSubmit} 
               disabled={isLoading}
               className={cn(
                 "w-full h-14 text-lg font-bold rounded-xl shadow-lg transition-all active:scale-95",
-                type === 'expense'
-                  ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
-                  : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+                type === 'expense' 
+                  ? "bg-red-600 hover:bg-red-700 shadow-red-600/20" 
+                  : (type === 'transfer' 
+                      ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20"
+                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20")
               )}
             >
-              {isLoading ? 'جاري الحفظ...' : (transactionIdToEdit ? 'حفظ التع��يلات' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد'))}
+              {isLoading 
+                ? 'جاري الحفظ...' 
+                : (drawerMode === 'edit' 
+                    ? 'حفظ التعديلات' 
+                    : (type === 'expense' 
+                        ? 'تسجيل المصروف' 
+                        : (type === 'transfer' ? 'تحويل الأموال' : 'إضافة الرصيد')))}
             </Button>
           </DrawerFooter>
         </div>

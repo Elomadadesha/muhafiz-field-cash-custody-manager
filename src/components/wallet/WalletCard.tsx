@@ -1,12 +1,13 @@
 import { Wallet } from '@/types/app';
-import { Wallet as WalletIcon, MoreVertical, CreditCard } from 'lucide-react';
+import { Wallet as WalletIcon, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface WalletCardProps {
   wallet: Wallet;
   currencySymbol: string;
+  isLowBalance?: boolean;
   onClick?: () => void;
 }
-export function WalletCard({ wallet, currencySymbol, onClick }: WalletCardProps) {
+export function WalletCard({ wallet, currencySymbol, isLowBalance, onClick }: WalletCardProps) {
   return (
     <div
       onClick={onClick}
@@ -14,7 +15,8 @@ export function WalletCard({ wallet, currencySymbol, onClick }: WalletCardProps)
         "group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 cursor-pointer active:scale-98",
         wallet.isActive
           ? "bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-900/10"
-          : "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 opacity-70"
+          : "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 opacity-70",
+        isLowBalance && !wallet.isActive && "border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/10"
       )}
     >
       {/* Background Patterns for Active Card */}
@@ -28,15 +30,22 @@ export function WalletCard({ wallet, currencySymbol, onClick }: WalletCardProps)
       <div className="relative z-10 flex flex-col h-full justify-between min-h-[100px]">
         <div className="flex justify-between items-start mb-4">
           <div className={cn(
-            "p-2.5 rounded-xl backdrop-blur-md",
-            wallet.isActive ? "bg-white/10 text-white border border-white/10" : "bg-white text-slate-400 border border-slate-100"
+            "p-2.5 rounded-xl backdrop-blur-md transition-colors",
+            wallet.isActive 
+              ? "bg-white/10 text-white border border-white/10" 
+              : (isLowBalance ? "bg-amber-100 text-amber-600 border border-amber-200" : "bg-white text-slate-400 border border-slate-100")
           )}>
-            <WalletIcon className="w-5 h-5" />
+            {isLowBalance ? <AlertTriangle className="w-5 h-5" /> : <WalletIcon className="w-5 h-5" />}
           </div>
           {wallet.isActive && (
             <div className="px-2 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-medium text-white/80">
               نشط
             </div>
+          )}
+          {!wallet.isActive && isLowBalance && (
+             <div className="px-2 py-1 rounded-lg bg-amber-100 border border-amber-200 text-[10px] font-bold text-amber-700">
+             رصيد منخفض
+           </div>
           )}
         </div>
         <div>
@@ -49,7 +58,9 @@ export function WalletCard({ wallet, currencySymbol, onClick }: WalletCardProps)
           <div className="flex items-baseline gap-1.5">
             <span className={cn(
               "text-3xl font-bold tabular-nums tracking-tight",
-              wallet.isActive ? "text-white" : "text-slate-900 dark:text-white"
+              wallet.isActive 
+                ? (isLowBalance ? "text-amber-400" : "text-white")
+                : (isLowBalance ? "text-amber-600 dark:text-amber-500" : "text-slate-900 dark:text-white")
             )}>
               {wallet.balance.toLocaleString('en-US')}
             </span>

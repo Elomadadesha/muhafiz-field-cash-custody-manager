@@ -4,7 +4,7 @@ import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Filter } from 'lucide-react';
+import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Filter, Copy } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -54,19 +54,20 @@ export function WalletDetailPage() {
     return (
       <RtlWrapper className="justify-center items-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجودة</h2>
+          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجو��ة</h2>
           <Button onClick={() => navigate('/dashboard')} className="mt-4">عودة للرئيسية</Button>
         </div>
       </RtlWrapper>
     );
   }
   const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
+    if (tx.categoryId === 'deposit_sys') return 'تغ��ية رصيد';
+    if (tx.categoryId === 'transfer_sys') return 'تحويل أموال';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const handleDelete = async (txId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
+    if (confirm('هل أنت متأ��د من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
       await deleteTransaction(txId);
       toast.success('تم حذف العملية بنجاح');
     }
@@ -88,8 +89,8 @@ export function WalletDetailPage() {
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{wallet.name}</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليات</p>
         </div>
-        <Button
-          size="sm"
+        <Button 
+          size="sm" 
           onClick={() => openTransactionDrawer(wallet.id)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
         >
@@ -175,8 +176,8 @@ export function WalletDetailPage() {
                     >
                       <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
-                        tx.type === 'expense'
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-500"
+                        tx.type === 'expense' 
+                          ? "bg-red-50 dark:bg-red-900/20 text-red-500" 
                           : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
                       )}>
                         {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
@@ -207,9 +208,13 @@ export function WalletDetailPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="text-right">
-                          <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id)} className="gap-2 cursor-pointer flex-row-reverse">
+                          <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id, 'edit')} className="gap-2 cursor-pointer flex-row-reverse">
                             <Pencil className="w-4 h-4" />
                             <span>تعديل</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id, 'duplicate')} className="gap-2 cursor-pointer flex-row-reverse">
+                            <Copy className="w-4 h-4" />
+                            <span>تكرار</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="gap-2 text-red-600 focus:text-red-600 cursor-pointer flex-row-reverse">
                             <Trash2 className="w-4 h-4" />

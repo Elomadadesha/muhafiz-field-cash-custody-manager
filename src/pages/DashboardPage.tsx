@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { WalletCard } from '@/components/wallet/WalletCard';
-import { Bell, Search, Plus, ArrowUpRight, ArrowDownLeft, Wallet } from 'lucide-react';
+import { Bell, Search, Plus, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/ui/logo';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, subDays, isSameDay } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { SearchDialog } from '@/components/search/SearchDialog';
 import { getTimeBasedGreeting } from '@/lib/utils';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 export function DashboardPage() {
   const wallets = useAppStore(s => s.wallets);
   const addWallet = useAppStore(s => s.addWallet);
@@ -37,6 +38,23 @@ export function DashboardPage() {
   const todayExpenses = transactions
     .filter(t => t.type === 'expense' && t.date >= today.getTime())
     .reduce((acc, t) => acc + t.amount, 0);
+  // Prepare Chart Data (Last 7 Days)
+  const chartData = useMemo(() => {
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(new Date(), i);
+      const dayExpenses = transactions
+        .filter(t => t.type === 'expense' && isSameDay(new Date(t.date), date))
+        .reduce((acc, t) => acc + t.amount, 0);
+      data.push({
+        name: format(date, 'EEEE', { locale: arSA }),
+        shortName: format(date, 'EEE', { locale: arSA }),
+        date: format(date, 'd MMM', { locale: arSA }),
+        amount: dayExpenses
+      });
+    }
+    return data;
+  }, [transactions]);
   const handleAddWallet = async () => {
     if (!newWalletName) return;
     const balance = parseFloat(newWalletBalance) || 0;
@@ -44,7 +62,7 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة الم��فظة بنجاح');
+    toast.success('تم إضافة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
@@ -82,7 +100,7 @@ export function DashboardPage() {
         transition={{ duration: 0.4 }}
         className="flex-1 px-6 pb-24 overflow-y-auto space-y-8"
       >
-        {/* Total Balance Card - Glassmorphism Redesign */}
+        {/* Total Balance Card */}
         <motion.div 
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -126,6 +144,59 @@ export function DashboardPage() {
             </div>
           </div>
         </motion.div>
+        {/* Spending Trend Chart */}
+        <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">اتجاه الم��روفات</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">آخر 7 أيام</p>
+            </div>
+          </div>
+          <div className="h-32 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="shortName" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#94a3b8' }} 
+                  dy={10}
+                  interval="preserveStartEnd"
+                />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-xl border border-slate-700">
+                          <p className="font-bold mb-1">{payload[0].payload.date}</p>
+                          <p className="font-mono">{Number(payload[0].value).toLocaleString()} {currency.symbol}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorAmount)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         {/* Quick Actions */}
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 px-1">إجراءات سريعة</h3>
@@ -219,6 +290,7 @@ export function DashboardPage() {
                   key={wallet.id} 
                   wallet={wallet} 
                   currencySymbol={currency.symbol}
+                  isLowBalance={wallet.balance < 500}
                   onClick={() => navigate(`/wallet/${wallet.id}`)}
                 />
               ))}
@@ -228,7 +300,7 @@ export function DashboardPage() {
               <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-slate-900 dark:text-white font-medium mb-1">لا توجد عُهد حالياً</h3>
+              <h3 className="text-slate-900 dark:text-white font-medium mb-1">لا توجد عُهد حا��ياً</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm">قم بإضافة عُهدة جديدة للبدء</p>
               <Button 
                 variant="outline" 
