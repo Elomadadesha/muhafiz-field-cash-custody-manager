@@ -3,6 +3,7 @@ import { AppData, Wallet, Transaction, Category } from '@/types/app';
 import { db, AppSettings } from '@/lib/db';
 import { hashPassword } from '@/lib/security';
 import { v4 as uuidv4 } from 'uuid';
+export type DrawerMode = 'create' | 'edit' | 'duplicate';
 interface AppState {
   // Auth State
   isAuthenticated: boolean;
@@ -19,6 +20,7 @@ interface AppState {
   settings: AppSettings;
   // UI State
   isTransactionDrawerOpen: boolean;
+  drawerMode: DrawerMode;
   selectedWalletId: string | null;
   transactionIdToEdit: string | null;
   // Initialization
@@ -34,11 +36,12 @@ interface AppState {
   renameWallet: (id: string, newName: string) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
   // Transaction Actions
-  openTransactionDrawer: (walletId?: string, transactionId?: string) => void;
+  openTransactionDrawer: (walletId?: string, transactionId?: string, mode?: DrawerMode) => void;
   closeTransactionDrawer: () => void;
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   editTransaction: (id: string, data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  transferFunds: (fromWalletId: string, toWalletId: string, amount: number, date: number, notes?: string) => Promise<void>;
   // Category Actions
   addCategory: (name: string) => Promise<string | undefined>; // Returns the new ID
   updateCategory: (id: string, newName: string) => Promise<void>;
@@ -62,6 +65,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   categories: [],
   settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
   isTransactionDrawerOpen: false,
+  drawerMode: 'create',
   selectedWalletId: null,
   transactionIdToEdit: null,
   init: async () => {
@@ -94,7 +98,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
@@ -225,18 +229,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       lastUpdated: Date.now()
     });
   },
-  openTransactionDrawer: (walletId, transactionId) => {
+  openTransactionDrawer: (walletId, transactionId, mode) => {
+    let determinedMode: DrawerMode = mode || 'create';
+    // Auto-detect mode if not explicitly provided
+    if (!mode) {
+      if (transactionId) determinedMode = 'edit';
+      else determinedMode = 'create';
+    }
     set({
       isTransactionDrawerOpen: true,
       selectedWalletId: walletId || null,
-      transactionIdToEdit: transactionId || null
+      transactionIdToEdit: transactionId || null,
+      drawerMode: determinedMode
     });
   },
   closeTransactionDrawer: () => {
     set({
       isTransactionDrawerOpen: false,
       selectedWalletId: null,
-      transactionIdToEdit: null
+      transactionIdToEdit: null,
+      drawerMode: 'create'
     });
   },
   addTransaction: async (data) => {
@@ -334,17 +346,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!tx) {
         throw new Error("Transaction not found");
       }
-      // 1. Revert transaction effect on wallet
-      const wallets = state.wallets.map(w => {
-        if (w.id === tx.walletId) {
-          // If expense, add back. If deposit, subtract.
-          const revertAmount = tx.type === 'expense' ? tx.amount : -tx.amount;
-          return { ...w, balance: w.balance + revertAmount };
+      // Identify all transactions to delete (including related transfer)
+      const idsToDelete = [id];
+      if (tx.relatedTransactionId) {
+        idsToDelete.push(tx.relatedTransactionId);
+      }
+      // 1. Revert transaction effects on wallets
+      let wallets = [...state.wallets];
+      // We need to process each transaction to delete to revert its effect
+      idsToDelete.forEach(deleteId => {
+        const t = state.transactions.find(tr => tr.id === deleteId);
+        if (t) {
+          const wIndex = wallets.findIndex(w => w.id === t.walletId);
+          if (wIndex !== -1) {
+            const w = wallets[wIndex];
+            const revertAmount = t.type === 'expense' ? t.amount : -t.amount;
+            wallets[wIndex] = { ...w, balance: w.balance + revertAmount };
+          }
         }
-        return w;
       });
-      // 2. Remove transaction
-      const updatedTransactions = state.transactions.filter(t => t.id !== id);
+      // 2. Remove transactions
+      const updatedTransactions = state.transactions.filter(t => !idsToDelete.includes(t.id));
       set({
         wallets,
         transactions: updatedTransactions,
@@ -358,6 +380,68 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       set({ isLoading: false, error: 'فشل حذف العملية' });
+    }
+  },
+  transferFunds: async (fromWalletId, toWalletId, amount, date, notes) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const fromWallet = state.wallets.find(w => w.id === fromWalletId);
+      const toWallet = state.wallets.find(w => w.id === toWalletId);
+      if (!fromWallet || !toWallet) throw new Error("Wallet not found");
+      if (fromWallet.balance < amount) throw new Error("Insufficient funds");
+      const fromTxId = uuidv4();
+      const toTxId = uuidv4();
+      const now = Date.now();
+      // 1. Create Expense (Source)
+      const expenseTx: Transaction = {
+        id: fromTxId,
+        walletId: fromWalletId,
+        amount,
+        type: 'expense',
+        categoryId: 'transfer_sys',
+        isTransfer: true,
+        relatedTransactionId: toTxId,
+        date,
+        notes,
+        createdAt: now
+      };
+      // 2. Create Deposit (Target)
+      const depositTx: Transaction = {
+        id: toTxId,
+        walletId: toWalletId,
+        amount,
+        type: 'deposit',
+        categoryId: 'transfer_sys',
+        isTransfer: true,
+        relatedTransactionId: fromTxId,
+        date,
+        notes,
+        createdAt: now
+      };
+      // 3. Update Wallets
+      const updatedWallets = state.wallets.map(w => {
+        if (w.id === fromWalletId) return { ...w, balance: w.balance - amount };
+        if (w.id === toWalletId) return { ...w, balance: w.balance + amount };
+        return w;
+      });
+      // 4. Update Transactions
+      const newTransactions = [expenseTx, depositTx, ...state.transactions];
+      set({
+        wallets: updatedWallets,
+        transactions: newTransactions,
+        isLoading: false,
+        isTransactionDrawerOpen: false
+      });
+      await db.saveData({
+        wallets: updatedWallets,
+        transactions: newTransactions,
+        categories: state.categories,
+        lastUpdated: now
+      });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تحويل الأموال' });
+      throw err;
     }
   },
   addCategory: async (name: string) => {

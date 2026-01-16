@@ -37,6 +37,9 @@ export interface Transaction {
   date: number;
   notes?: string;
   createdAt: number;
+  // Transfer Support
+  relatedTransactionId?: string; // Links expense in Wallet A to deposit in Wallet B
+  isTransfer?: boolean;
 }
 export interface Category {
   id: string;
