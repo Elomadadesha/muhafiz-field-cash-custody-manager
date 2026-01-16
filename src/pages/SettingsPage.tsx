@@ -132,10 +132,10 @@ export function SettingsPage() {
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-4 space-y-4">
             {/* Auto Lock */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-medium text-slate-700">القفل التلقائي</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-slate-700">القفل التلقائي</span>
+            </div>
               <Select 
                 value={settings.autoLockMinutes.toString()} 
                 onValueChange={(v) => updateSettings({ autoLockMinutes: parseInt(v) })}
@@ -157,12 +157,12 @@ export function SettingsPage() {
             <div className="grid grid-cols-2 gap-3">
               {/* Backup Dialog */}
               <Dialog open={isBackupOpen} onOpenChange={setIsBackupOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-10">
-                    <Download className="w-4 h-4" />
-                    نسخ احتياطي
-                  </Button>
-                </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2 h-10">
+                  <Download className="w-4 h-4 text-blue-600" />
+                  نسخ احتياطي
+                </Button>
+              </DialogTrigger>
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
@@ -194,12 +194,12 @@ export function SettingsPage() {
               </Dialog>
               {/* Restore Dialog */}
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-10">
-                    <Upload className="w-4 h-4" />
-                    استعادة
-                  </Button>
-                </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2 h-10">
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  استعادة
+                </Button>
+              </DialogTrigger>
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
@@ -249,12 +249,12 @@ export function SettingsPage() {
               <h2>بنود الصرف</h2>
             </div>
             <Dialog open={isAddCatOpen} onOpenChange={setIsAddCatOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs">
-                  <Plus className="w-3 h-3 ml-1" />
-                  إضافة
-                </Button>
-              </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <Plus className="w-3 h-3 ml-1 text-blue-600" />
+                إضافة
+              </Button>
+            </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة بند صرف جدي��</DialogTitle>

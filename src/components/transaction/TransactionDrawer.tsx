@@ -162,13 +162,13 @@ export function TransactionDrawer() {
                       className={cn(
                         "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all",
                         categoryId === cat.id
-                          ? "border-primary bg-primary/5 text-primary"
+                          ? "border-blue-600 bg-blue-50 text-blue-600"
                           : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center",
-                        categoryId === cat.id ? "bg-primary text-white" : "bg-slate-100"
+                        categoryId === cat.id ? "bg-blue-600 text-white" : "bg-slate-100"
                       )}>
                         {getCategoryIcon(cat.name)}
                       </div>
