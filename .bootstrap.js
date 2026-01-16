@@ -82,7 +82,7 @@ function runSetupCommands() {
     "bun add vite-plugin-pwa@^0.19.0",
     "bun add @fontsource/tajawal@^5.0.0",
     "bun add recharts",
-    "bun add idb-keyval html-to-image xlsx",
+    "bun add idb-keyval xlsx",
     "bun add uuid idb-keyval",
     "bun add @types/uuid",
     "bun add framer-motion",
