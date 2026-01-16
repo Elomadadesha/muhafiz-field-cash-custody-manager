@@ -1,22 +1,31 @@
 import { create } from 'zustand';
 import { AppData, Wallet, Transaction, Category } from '@/types/app';
-import { api } from '@/lib/api-client';
+import { db, AppSettings } from '@/lib/db';
+import { hashPassword } from '@/lib/security';
 interface AppState {
-  // Auth
+  // Auth State
   isAuthenticated: boolean;
-  login: (password: string) => Promise<boolean>;
-  logout: () => void;
-  // Data
+  isLocked: boolean;
+  isSetup: boolean; // True if password exists
+  isLoading: boolean;
+  error: string | null;
+  // Data State
   wallets: Wallet[];
   transactions: Transaction[];
   categories: Category[];
-  isLoading: boolean;
-  error: string | null;
+  settings: AppSettings;
   // UI State
   isTransactionDrawerOpen: boolean;
   selectedWalletId: string | null;
-  // Actions
-  sync: () => Promise<void>;
+  // Initialization
+  init: () => Promise<void>;
+  // Auth Actions
+  setupApp: (password: string) => Promise<void>;
+  login: (password: string) => Promise<boolean>;
+  logout: () => void;
+  lockApp: () => void;
+  unlockApp: (password: string) => Promise<boolean>;
+  // Data Actions
   addWallet: (name: string, initialBalance: number) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
   // Transaction Actions
@@ -26,61 +35,80 @@ interface AppState {
   // Category Actions
   addCategory: (name: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  // Settings Actions
+  updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
+  restoreData: (data: AppData) => Promise<void>;
   // Helpers
   getWallet: (id: string) => Wallet | undefined;
 }
-// Initial Mock Data for first load or offline fallback
-const INITIAL_CATEGORIES: Category[] = [
-  { id: 'cat_1', name: 'مواصلات', isSystem: true },
-  { id: 'cat_2', name: 'وقود', isSystem: true },
-  { id: 'cat_3', name: 'صيانة', isSystem: true },
-  { id: 'cat_4', name: 'قطع غيار', isSystem: true },
-  { id: 'cat_5', name: 'إعاشة', isSystem: true },
-  { id: 'cat_6', name: 'أخرى', isSystem: true },
-];
 export const useAppStore = create<AppState>((set, get) => ({
-  isAuthenticated: localStorage.getItem('muhafiz_auth') === 'true',
+  isAuthenticated: false,
+  isLocked: false,
+  isSetup: false,
+  isLoading: true,
+  error: null,
   wallets: [],
   transactions: [],
-  categories: INITIAL_CATEGORIES,
-  isLoading: false,
-  error: null,
+  categories: [],
+  settings: { autoLockMinutes: 5, lastActive: Date.now() },
   isTransactionDrawerOpen: false,
   selectedWalletId: null,
-  login: async (password: string) => {
-    // Simple mock auth for Phase 1
-    // In a real app, verify against backend hash
-    if (password === '123456') { // Demo password
-      localStorage.setItem('muhafiz_auth', 'true');
-      set({ isAuthenticated: true });
-      await get().sync();
-      return true;
-    }
-    return false;
-  },
-  logout: () => {
-    localStorage.removeItem('muhafiz_auth');
-    set({ isAuthenticated: false, wallets: [], transactions: [] });
-  },
-  sync: async () => {
-    set({ isLoading: true, error: null });
+  init: async () => {
+    set({ isLoading: true });
     try {
-      // We use a fixed ID for the single user concept
-      const data = await api<AppData>('/api/sync');
-      set({ 
-        wallets: data.wallets || [], 
-        transactions: data.transactions || [],
-        // If backend has no categories (first run), use initial. Otherwise use backend's.
-        categories: data.categories?.length ? data.categories : INITIAL_CATEGORIES,
-        isLoading: false 
+      // Check if password exists
+      const hash = await db.getPasswordHash();
+      const isSetup = !!hash;
+      // Load data
+      const data = await db.getData();
+      const settings = await db.getSettings();
+      set({
+        isSetup,
+        wallets: data.wallets,
+        transactions: data.transactions,
+        categories: data.categories,
+        settings,
+        isLoading: false
       });
     } catch (err) {
-      console.error('Sync failed:', err);
-      set({ 
-        error: err instanceof Error ? err.message : 'فشل الاتصال بالخادم', 
-        isLoading: false 
-      });
+      console.error('Init failed:', err);
+      set({ isLoading: false, error: 'فشل تحميل البيانات' });
     }
+  },
+  setupApp: async (password: string) => {
+    set({ isLoading: true });
+    try {
+      const hash = await hashPassword(password);
+      await db.setPasswordHash(hash);
+      set({ isSetup: true, isAuthenticated: true, isLocked: false, isLoading: false });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل إعداد التطبيق' });
+    }
+  },
+  login: async (password: string) => {
+    set({ isLoading: true });
+    try {
+      const storedHash = await db.getPasswordHash();
+      const inputHash = await hashPassword(password);
+      if (storedHash === inputHash) {
+        set({ isAuthenticated: true, isLocked: false, isLoading: false });
+        return true;
+      }
+      set({ isLoading: false });
+      return false;
+    } catch (err) {
+      set({ isLoading: false });
+      return false;
+    }
+  },
+  logout: () => {
+    set({ isAuthenticated: false, isLocked: false });
+  },
+  lockApp: () => {
+    set({ isLocked: true });
+  },
+  unlockApp: async (password: string) => {
+    return get().login(password);
   },
   addWallet: async (name: string, initialBalance: number) => {
     set({ isLoading: true });
@@ -92,41 +120,34 @@ export const useAppStore = create<AppState>((set, get) => ({
         isActive: true,
         createdAt: Date.now(),
       };
-      // Optimistic update
-      set(state => ({
-        wallets: [...state.wallets, newWallet]
-      }));
-      await api('/api/wallet', {
-        method: 'POST',
-        body: JSON.stringify(newWallet)
+      const state = get();
+      const newWallets = [...state.wallets, newWallet];
+      // Update local state
+      set({ wallets: newWallets });
+      // Persist
+      await db.saveData({
+        wallets: newWallets,
+        transactions: state.transactions,
+        categories: state.categories,
+        lastUpdated: Date.now()
       });
       set({ isLoading: false });
     } catch (err) {
-      console.error('Add wallet failed:', err);
-      // Revert on failure would go here in a robust app
       set({ isLoading: false, error: 'فشل إضافة المحفظة' });
     }
   },
   toggleWalletStatus: async (id: string) => {
-    const wallets = get().wallets;
-    const wallet = wallets.find(w => w.id === id);
-    if (!wallet) return;
-    const updatedWallet = { ...wallet, isActive: !wallet.isActive };
-    set(state => ({
-      wallets: state.wallets.map(w => w.id === id ? updatedWallet : w)
-    }));
-    try {
-      await api('/api/wallet', {
-        method: 'POST',
-        body: JSON.stringify(updatedWallet)
-      });
-    } catch (err) {
-      console.error('Update wallet failed:', err);
-      // Revert
-      set(state => ({
-        wallets: state.wallets.map(w => w.id === id ? wallet : w)
-      }));
-    }
+    const state = get();
+    const updatedWallets = state.wallets.map(w => 
+      w.id === id ? { ...w, isActive: !w.isActive } : w
+    );
+    set({ wallets: updatedWallets });
+    await db.saveData({
+      wallets: updatedWallets,
+      transactions: state.transactions,
+      categories: state.categories,
+      lastUpdated: Date.now()
+    });
   },
   openTransactionDrawer: (walletId) => {
     set({ isTransactionDrawerOpen: true, selectedWalletId: walletId || null });
@@ -142,21 +163,33 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: Date.now(),
         ...data
       };
-      const updatedData = await api<AppData>('/api/transaction', {
-        method: 'POST',
-        body: JSON.stringify(newTx)
+      const state = get();
+      // Update wallet balance
+      const updatedWallets = state.wallets.map(w => {
+        if (w.id === data.walletId) {
+          const newBalance = data.type === 'expense' 
+            ? w.balance - data.amount 
+            : w.balance + data.amount;
+          return { ...w, balance: newBalance };
+        }
+        return w;
       });
-      set({ 
-        wallets: updatedData.wallets, 
-        transactions: updatedData.transactions,
+      const newTransactions = [newTx, ...state.transactions];
+      set({
+        wallets: updatedWallets,
+        transactions: newTransactions,
         isLoading: false,
-        isTransactionDrawerOpen: false, // Close drawer on success
+        isTransactionDrawerOpen: false,
         selectedWalletId: null
       });
+      await db.saveData({
+        wallets: updatedWallets,
+        transactions: newTransactions,
+        categories: state.categories,
+        lastUpdated: Date.now()
+      });
     } catch (err) {
-      console.error('Add transaction failed:', err);
       set({ isLoading: false, error: 'فشل إضافة العملية' });
-      throw err; // Re-throw to let UI handle specific error feedback if needed
     }
   },
   addCategory: async (name: string) => {
@@ -167,33 +200,61 @@ export const useAppStore = create<AppState>((set, get) => ({
         name,
         isSystem: false
       };
-      const updatedData = await api<AppData>('/api/category', {
-        method: 'POST',
-        body: JSON.stringify(newCategory)
-      });
-      set({ 
-        categories: updatedData.categories,
-        isLoading: false 
+      const state = get();
+      const newCategories = [...state.categories, newCategory];
+      set({ categories: newCategories, isLoading: false });
+      await db.saveData({
+        wallets: state.wallets,
+        transactions: state.transactions,
+        categories: newCategories,
+        lastUpdated: Date.now()
       });
     } catch (err) {
-      console.error('Add category failed:', err);
       set({ isLoading: false, error: 'فشل إضافة البند' });
-      throw err;
     }
   },
   deleteCategory: async (id: string) => {
     set({ isLoading: true });
     try {
-      const updatedData = await api<AppData>(`/api/category/${id}`, {
-        method: 'DELETE'
-      });
-      set({ 
-        categories: updatedData.categories,
-        isLoading: false 
+      const state = get();
+      const category = state.categories.find(c => c.id === id);
+      if (category?.isSystem) {
+        throw new Error("Cannot delete system category");
+      }
+      const newCategories = state.categories.filter(c => c.id !== id);
+      set({ categories: newCategories, isLoading: false });
+      await db.saveData({
+        wallets: state.wallets,
+        transactions: state.transactions,
+        categories: newCategories,
+        lastUpdated: Date.now()
       });
     } catch (err) {
-      console.error('Delete category failed:', err);
       set({ isLoading: false, error: 'فشل حذف البند' });
+    }
+  },
+  updateSettings: async (newSettings) => {
+    const state = get();
+    const updated = { ...state.settings, ...newSettings };
+    set({ settings: updated });
+    await db.saveSettings(updated);
+  },
+  restoreData: async (data: AppData) => {
+    set({ isLoading: true });
+    try {
+      // Validate data structure roughly
+      if (!Array.isArray(data.wallets) || !Array.isArray(data.transactions)) {
+        throw new Error("Invalid data format");
+      }
+      set({
+        wallets: data.wallets,
+        transactions: data.transactions,
+        categories: data.categories,
+        isLoading: false
+      });
+      await db.saveData(data);
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل استعادة البيانات' });
       throw err;
     }
   },

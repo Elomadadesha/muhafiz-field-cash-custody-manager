@@ -7,10 +7,17 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { useAppStore } from '@/lib/store';
 import { Toaster } from 'sonner';
 import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
+import { useAutoLock } from '@/hooks/use-auto-lock';
 // Auth Guard
 function ProtectedRoute() {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
+  const isLocked = useAppStore(s => s.isLocked);
+  // Hook to monitor inactivity and lock app
+  useAutoLock();
   if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  if (isLocked) {
     return <Navigate to="/login" replace />;
   }
   return (
@@ -20,10 +27,11 @@ function ProtectedRoute() {
     </>
   );
 }
-// Public Route (redirect if already logged in)
+// Public Route
 function PublicRoute() {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
-  if (isAuthenticated) {
+  const isLocked = useAppStore(s => s.isLocked);
+  if (isAuthenticated && !isLocked) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
