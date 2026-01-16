@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { Transaction } from '@/types/app';
 export function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -27,9 +28,10 @@ export function WalletDetailPage() {
       </RtlWrapper>
     );
   }
-  const getCategoryName = (catId: string) => {
-    if (catId === 'deposit_sys') return 'تغذية رصيد';
-    return categories.find(c => c.id === catId)?.name || 'غير محدد';
+  const getCategoryName = (tx: Transaction) => {
+    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
+    if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
+    return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   return (
     <RtlWrapper>
@@ -93,7 +95,7 @@ export function WalletDetailPage() {
                 </div>
                 <div className="flex-1 min-w-0 py-1">
                   <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-bold text-slate-900 dark:text-white truncate">{getCategoryName(tx.categoryId)}</h4>
+                    <h4 className="font-bold text-slate-900 dark:text-white truncate">{getCategoryName(tx)}</h4>
                     <span className={cn(
                       "font-bold tabular-nums whitespace-nowrap",
                       tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"

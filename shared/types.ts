@@ -33,6 +33,7 @@ export interface Transaction {
   amount: number;
   type: 'expense' | 'deposit';
   categoryId: string;
+  customCategoryName?: string; // New field for one-time or custom categories
   date: number;
   notes?: string;
   createdAt: number;

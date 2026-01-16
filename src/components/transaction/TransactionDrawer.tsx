@@ -8,14 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings } from 'lucide-react';
+import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, Plus, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
-  if (name.includes('مواصلات')) return <Bus className="w-5 h-5" />;
+  if (name.includes('مواص��ات')) return <Bus className="w-5 h-5" />;
   if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
@@ -29,6 +30,7 @@ export function TransactionDrawer() {
   const categories = useAppStore(s => s.categories);
   const selectedWalletId = useAppStore(s => s.selectedWalletId);
   const addTransaction = useAppStore(s => s.addTransaction);
+  const addCategory = useAppStore(s => s.addCategory);
   const isLoading = useAppStore(s => s.isLoading);
   const settings = useAppStore(s => s.settings);
   const currency = CURRENCIES[settings.currency];
@@ -38,6 +40,10 @@ export function TransactionDrawer() {
   const [amount, setAmount] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [date, setDate] = useState<Date | undefined>(new Date());
+  // Custom Category State
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [saveCustomCategory, setSaveCustomCategory] = useState(false);
   // Sync selected wallet from store
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +60,9 @@ export function TransactionDrawer() {
       setCategoryId('');
       setDate(new Date());
       setType('expense');
+      setIsCustomCategory(false);
+      setCustomCategoryName('');
+      setSaveCustomCategory(false);
     }
   }, [isOpen, selectedWalletId, wallets, walletId]);
   const handleSubmit = async () => {
@@ -65,31 +74,65 @@ export function TransactionDrawer() {
       toast.error('الرجاء إدخال مبلغ صحيح');
       return;
     }
-    if (type === 'expense' && !categoryId) {
-      toast.error('الرجاء اختيار بند الصرف');
-      return;
+    let finalCategoryId = categoryId;
+    let finalCustomName = undefined;
+    if (type === 'expense') {
+      if (isCustomCategory) {
+        if (!customCategoryName.trim()) {
+          toast.error('الرجاء كتابة ا��م البند');
+          return;
+        }
+        if (saveCustomCategory) {
+          // Add to permanent list
+          const newId = await addCategory(customCategoryName.trim());
+          if (!newId) {
+            toast.error('فشل إضافة البند الجديد');
+            return;
+          }
+          finalCategoryId = newId;
+        } else {
+          // One-time custom category
+          finalCategoryId = 'custom';
+          finalCustomName = customCategoryName.trim();
+        }
+      } else if (!categoryId) {
+        toast.error('الرجاء اختيار بند الصرف');
+        return;
+      }
+    } else {
+      // Deposit
+      finalCategoryId = 'deposit_sys';
     }
     try {
       await addTransaction({
         walletId,
         amount: parseFloat(amount),
         type,
-        categoryId: type === 'deposit' ? 'deposit_sys' : categoryId, // System category for deposits
+        categoryId: finalCategoryId,
+        customCategoryName: finalCustomName,
         date: date ? date.getTime() : Date.now(),
         notes
       });
       toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثناء حفظ العملية');
+      toast.error('حدث خطأ أثنا�� حفظ العملية');
     }
+  };
+  const handleCategorySelect = (id: string) => {
+    setCategoryId(id);
+    setIsCustomCategory(false);
+  };
+  const handleCustomCategorySelect = () => {
+    setCategoryId('');
+    setIsCustomCategory(true);
   };
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && closeDrawer()}>
       <DrawerContent className="max-h-[95vh]" dir="rtl">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader>
-            <DrawerTitle className="text-center text-xl font-bold">تسجيل ��ملية جديدة</DrawerTitle>
+            <DrawerTitle className="text-center text-xl font-bold">تسجيل عملية جديدة</DrawerTitle>
             <DrawerDescription className="text-center text-slate-500">
               أدخل تفاصيل العملية المالية أدناه
             </DrawerDescription>
@@ -161,24 +204,69 @@ export function TransactionDrawer() {
                   {categories.map(cat => (
                     <button
                       key={cat.id}
-                      onClick={() => setCategoryId(cat.id)}
+                      onClick={() => handleCategorySelect(cat.id)}
                       className={cn(
                         "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
-                        categoryId === cat.id
+                        categoryId === cat.id && !isCustomCategory
                           ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
                           : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                        categoryId === cat.id ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700"
+                        categoryId === cat.id && !isCustomCategory ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700"
                       )}>
                         {getCategoryIcon(cat.name)}
                       </div>
                       <span className="text-xs font-medium truncate w-full text-center">{cat.name}</span>
                     </button>
                   ))}
+                  {/* Other / Custom Category Button */}
+                  <button
+                    onClick={handleCustomCategorySelect}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
+                      isCustomCategory
+                        ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                      isCustomCategory ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700"
+                    )}>
+                      <PenLine className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخصص</span>
+                  </button>
                 </div>
+                {/* Custom Category Input Area */}
+                {isCustomCategory && (
+                  <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-right block text-slate-600 dark:text-slate-300">اسم البند المخصص</Label>
+                        <Input
+                          value={customCategoryName}
+                          onChange={(e) => setCustomCategoryName(e.target.value)}
+                          placeholder="اكتب اسم البند هنا..."
+                          className="h-12 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                          حفظ في القائمة لاست��دامه مستقبلاً
+                        </Label>
+                        <Switch
+                          id="save-category"
+                          checked={saveCustomCategory}
+                          onCheckedChange={setSaveCustomCategory}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {/* Date & Notes */}
@@ -214,7 +302,7 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفاصيل..."
+                  placeholder="أضف تفا��يل..."
                   className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right bg-white dark:bg-slate-800"
                 />
               </div>
@@ -231,7 +319,7 @@ export function TransactionDrawer() {
                   : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
               )}
             >
-              {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد')}
+              {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إ��افة الرصيد')}
             </Button>
           </DrawerFooter>
         </div>

@@ -11,6 +11,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Transaction } from '@/types/app';
 type TimeRange = 'today' | 'week' | 'month' | 'all';
 // Blue-centric palette
 const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
@@ -50,20 +51,30 @@ export function ReportsPage() {
     filteredTransactions
       .filter(t => t.type === 'expense')
       .forEach(t => {
-        const current = categoryMap.get(t.categoryId) || 0;
-        categoryMap.set(t.categoryId, current + t.amount);
+        let key = t.categoryId;
+        // Use a composite key for custom categories to group them by name
+        if (key === 'custom' && t.customCategoryName) {
+          key = `custom:${t.customCategoryName}`;
+        }
+        const current = categoryMap.get(key) || 0;
+        categoryMap.set(key, current + t.amount);
       });
     return Array.from(categoryMap.entries())
-      .map(([id, value]) => ({
-        name: categories.find(c => c.id === id)?.name || 'غير مح��د',
-        value
-      }))
+      .map(([id, value]) => {
+        let name = 'غير محدد';
+        if (id.startsWith('custom:')) {
+          name = id.replace('custom:', '');
+        } else {
+          name = categories.find(c => c.id === id)?.name || 'غير محدد';
+        }
+        return { name, value };
+      })
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
   const generateTextReport = () => {
     const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
     let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
-    text += `���� الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
+    text += `💰 الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
     text += `💸 المصروفات: ${summary.expense.toLocaleString()} ${currency.symbol}\n`;
     text += `📊 الصافي: ${summary.net.toLocaleString()} ${currency.symbol}\n\n`;
     text += `*أهم البنود:*\n`;
@@ -95,14 +106,14 @@ export function ReportsPage() {
           text: generateTextReport(),
           files: [file]
         });
-        toast.success('تم�� المشاركة بنجاح');
+        toast.success('تمت الم��اركة بنجاح');
       } else {
         // Fallback to download
         const link = document.createElement('a');
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
         link.click();
-        toast.success('تم تحميل ال��قرير كصورة');
+        toast.success('تم تحميل التقرير كصورة');
       }
     } catch (error) {
       console.error('Image share failed:', error);
@@ -125,9 +136,10 @@ export function ReportsPage() {
       setIsSharing(false);
     }
   };
-  const getCategoryName = (id: string) => {
-    if (id === 'deposit_sys') return 'تغ��ية رصيد';
-    return categories.find(c => c.id === id)?.name || 'غير محدد';
+  const getCategoryName = (tx: Transaction) => {
+    if (tx.categoryId === 'deposit_sys') return 'تغ��ية رصيد';
+    if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
+    return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const getWalletName = (id: string) => {
     return wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
@@ -139,13 +151,13 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
         </div>
-        <Button 
-          onClick={handleShare} 
+        <Button
+          onClick={handleShare}
           disabled={isSharing}
-          size="sm" 
+          size="sm"
           className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
         >
-          {isSharing ? 'جاري المعال��ة...' : (
+          {isSharing ? 'جاري المعالجة...' : (
             <>
               <Share2 className="w-4 h-4" />
               <span>مشاركة</span>
@@ -227,7 +239,7 @@ export function ReportsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
@@ -242,7 +254,7 @@ export function ReportsPage() {
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
             {filteredTransactions.length === 0 ? (
               <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                <p className="text-slate-400 text-sm">لا توج�� عمليات في هذه الفترة</p>
+                <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -254,7 +266,7 @@ export function ReportsPage() {
                         tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
                       )} />
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx.categoryId)}</p>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx)}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {getWalletName(tx.walletId)} • {format(tx.date, 'h:mm a', { locale: arSA })}
                         </p>
@@ -275,7 +287,7 @@ export function ReportsPage() {
           </div>
           {/* Footer for Report */}
           <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
+            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطب��ق Abu MaWaDa</p>
           </div>
         </div>
       </div>

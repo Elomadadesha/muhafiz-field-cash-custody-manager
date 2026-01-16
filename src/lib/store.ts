@@ -34,7 +34,7 @@ interface AppState {
   closeTransactionDrawer: () => void;
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   // Category Actions
-  addCategory: (name: string) => Promise<void>;
+  addCategory: (name: string) => Promise<string | undefined>; // Returns the new ID
   deleteCategory: (id: string) => Promise<void>;
   // Settings Actions
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
@@ -76,7 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
@@ -91,7 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await db.setPasswordHash(hash);
       set({ isSetup: true, isAuthenticated: true, isLocked: false, isLoading: false });
     } catch (err) {
-      set({ isLoading: false, error: 'فشل إعداد الت��بيق' });
+      set({ isLoading: false, error: 'فشل إعداد التطبيق' });
       throw err;
     }
   },
@@ -205,8 +205,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   addCategory: async (name: string) => {
     set({ isLoading: true });
     try {
+      const id = uuidv4();
       const newCategory: Category = {
-        id: uuidv4(),
+        id,
         name,
         isSystem: false
       };
@@ -219,8 +220,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         categories: newCategories,
         lastUpdated: Date.now()
       });
+      return id;
     } catch (err) {
       set({ isLoading: false, error: 'فشل إضافة البند' });
+      return undefined;
     }
   },
   deleteCategory: async (id: string) => {
