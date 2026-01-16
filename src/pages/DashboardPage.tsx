@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 export function DashboardPage() {
   const wallets = useAppStore(s => s.wallets);
-  const sync = useAppStore(s => s.sync);
   const addWallet = useAppStore(s => s.addWallet);
   const isLoading = useAppStore(s => s.isLoading);
   const transactions = useAppStore(s => s.transactions);
@@ -20,9 +19,6 @@ export function DashboardPage() {
   const [newWalletName, setNewWalletName] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
   const navigate = useNavigate();
-  useEffect(() => {
-    sync();
-  }, [sync]);
   const totalBalance = wallets.reduce((acc, w) => w.isActive ? acc + w.balance : acc, 0);
   // Calculate today's expenses
   const today = new Date();

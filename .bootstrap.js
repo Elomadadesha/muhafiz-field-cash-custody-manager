@@ -82,7 +82,9 @@ function runSetupCommands() {
     "bun add vite-plugin-pwa@^0.19.0",
     "bun add @fontsource/tajawal@^5.0.0",
     "bun add recharts",
-    "bun add idb-keyval"
+    "bun add idb-keyval",
+    "bun add uuid",
+    "bun add @types/uuid"
 ];
     
     if (commands.length === 0) {
