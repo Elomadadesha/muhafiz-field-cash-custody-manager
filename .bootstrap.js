@@ -83,7 +83,7 @@ function runSetupCommands() {
     "bun add @fontsource/tajawal@^5.0.0",
     "bun add recharts",
     "bun add idb-keyval",
-    "bun add uuid @types/uuid",
+    "bun add uuid idb-keyval",
     "bun add @types/uuid"
 ];
     
