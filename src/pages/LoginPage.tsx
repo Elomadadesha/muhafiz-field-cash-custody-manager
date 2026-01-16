@@ -1,28 +1,55 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, KeyRound } from 'lucide-react';
+import { ArrowLeft, Lock, KeyRound, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Logo } from '@/components/ui/logo';
 import { toast } from 'sonner';
+import { LoginSchema } from '@/lib/validation';
 export function LoginPage() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [lockoutTimer, setLockoutTimer] = useState<number>(0);
   const login = useAppStore(s => s.login);
   const setupApp = useAppStore(s => s.setupApp);
   const isSetup = useAppStore(s => s.isSetup);
   const isLocked = useAppStore(s => s.isLocked);
   const init = useAppStore(s => s.init);
+  const lockoutUntil = useAppStore(s => s.lockoutUntil);
   const navigate = useNavigate();
   useEffect(() => {
     init();
   }, [init]);
+  // Handle Lockout Timer
+  useEffect(() => {
+    if (!lockoutUntil) {
+      setLockoutTimer(0);
+      return;
+    }
+    const updateTimer = () => {
+      const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setLockoutTimer(0);
+      } else {
+        setLockoutTimer(remaining);
+      }
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pin) return;
+    // Validation
+    const validation = LoginSchema.safeParse({ pin });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
     setIsLoading(true);
     try {
       const success = await login(pin);
@@ -30,19 +57,25 @@ export function LoginPage() {
         toast.success('تم تسجيل الدخول بنجاح');
         navigate('/dashboard');
       } else {
-        toast.error('كلمة المرور غير صحيحة');
+        if (useAppStore.getState().lockoutUntil) {
+          toast.error('تم قفل المحاولات مؤقتاً');
+        } else {
+          toast.error('كلمة المرور غير صحيحة');
+        }
         setPin('');
       }
     } catch (error) {
-      toast.error('حدث خطأ أثناء تسجيل الدخول');
+      toast.error('حدث خطأ أ��ناء تسجيل الدخول');
     } finally {
       setIsLoading(false);
     }
   };
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length < 4) {
-      toast.error('كلمة المرور يجب أن تكون 4 أرقام على الأقل');
+    // Validation
+    const validation = LoginSchema.safeParse({ pin });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
     if (pin !== confirmPin) {
@@ -52,7 +85,7 @@ export function LoginPage() {
     setIsLoading(true);
     try {
       await setupApp(pin);
-      toast.success('تم إعداد التطبي�� بنجاح');
+      toast.success('تم إعداد التطبيق بنجاح');
       navigate('/dashboard');
     } catch (error) {
       toast.error('فشل إعداد التطبيق');
@@ -74,11 +107,21 @@ export function LoginPage() {
             <p className="text-slate-500 dark:text-slate-400 text-sm">
               {isSetup
                 ? (isLocked ? 'التطبيق مقفل' : 'تسجيل الدخول')
-                : 'إعداد كلمة المرور الجديد��'}
+                : 'إعداد كلمة المرور الجديدة'}
             </p>
           </div>
         </div>
-        {isSetup ? (
+        {lockoutTimer > 0 ? (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center space-y-2 animate-pulse">
+            <AlertTriangle className="w-8 h-8 text-red-500 mx-auto" />
+            <p className="text-red-600 dark:text-red-400 font-bold text-sm">
+              محاولات خاطئة كثيرة
+            </p>
+            <p className="text-red-500 dark:text-red-300 text-xs">
+              يرجى الانتظار {lockoutTimer} ثانية
+            </p>
+          </div>
+        ) : isSetup ? (
           // Login Form
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
@@ -93,14 +136,15 @@ export function LoginPage() {
                 onChange={(e) => setPin(e.target.value)}
                 className="text-center text-2xl tracking-widest h-14 rounded-xl border-slate-200 dark:border-slate-700 focus:border-amber-500 focus:ring-amber-500/20 bg-white dark:bg-slate-900"
                 autoFocus
+                disabled={lockoutTimer > 0}
               />
             </div>
             <Button
               type="submit"
-              className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
-              disabled={isLoading || !pin}
+              className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || !pin || lockoutTimer > 0}
             >
-              {isLoading ? 'جار�� التحقق...' : (isLocked ? 'فتح القفل' : 'دخول')}
+              {isLoading ? 'جاري التحقق...' : (isLocked ? 'فتح القفل' : 'دخول')}
               <ArrowLeft className="w-5 h-5 mr-2" />
             </Button>
           </form>
@@ -140,7 +184,7 @@ export function LoginPage() {
               className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
               disabled={isLoading || !pin || !confirmPin}
             >
-              {isLoading ? 'جاري الحفظ...' : 'بدء الا��تخدام'}
+              {isLoading ? 'جاري الحفظ...' : 'بدء الاستخدام'}
               <KeyRound className="w-5 h-5 mr-2" />
             </Button>
           </form>
@@ -148,7 +192,7 @@ export function LoginPage() {
         <div className="text-center space-y-2 mt-8">
           <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
             <Lock className="w-3 h-3" />
-            <span>بيا��اتك مشفرة ومحفوظة محلياً</span>
+            <span>بياناتك مشفرة ومحفوظة محلياً</span>
           </div>
           <p className="text-[10px] text-slate-300">
             v2.1.0 • Abu MaWaDa

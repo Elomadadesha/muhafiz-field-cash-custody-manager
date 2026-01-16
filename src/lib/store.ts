@@ -10,6 +10,8 @@ interface AppState {
   isSetup: boolean; // True if password exists
   isLoading: boolean;
   error: string | null;
+  failedAttempts: number;
+  lockoutUntil: number | null;
   // Data State
   wallets: Wallet[];
   transactions: Transaction[];
@@ -50,6 +52,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   isSetup: false,
   isLoading: true,
   error: null,
+  failedAttempts: 0,
+  lockoutUntil: localStorage.getItem('muhafiz_lockout') ? parseInt(localStorage.getItem('muhafiz_lockout')!) : null,
   wallets: [],
   transactions: [],
   categories: [],
@@ -65,12 +69,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Load data
       const data = await db.getData();
       const settings = await db.getSettings();
+      // Check lockout expiration on init
+      const storedLockout = localStorage.getItem('muhafiz_lockout');
+      let currentLockout = storedLockout ? parseInt(storedLockout) : null;
+      if (currentLockout && Date.now() >= currentLockout) {
+        currentLockout = null;
+        localStorage.removeItem('muhafiz_lockout');
+      }
       set({
         isSetup,
         wallets: data.wallets || [],
         transactions: data.transactions || [],
         categories: data.categories || [],
         settings: settings || { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
+        lockoutUntil: currentLockout,
         isLoading: false
       });
     } catch (err) {
@@ -78,7 +90,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تح��يل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
@@ -98,15 +110,44 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   login: async (password: string) => {
+    const state = get();
+    // Check lockout
+    if (state.lockoutUntil) {
+      if (Date.now() < state.lockoutUntil) {
+        return false;
+      } else {
+        // Lockout expired
+        set({ lockoutUntil: null, failedAttempts: 0 });
+        localStorage.removeItem('muhafiz_lockout');
+      }
+    }
     set({ isLoading: true });
     try {
       const storedHash = await db.getPasswordHash();
       const inputHash = await hashPassword(password);
       if (storedHash === inputHash) {
-        set({ isAuthenticated: true, isLocked: false, isLoading: false });
+        set({ 
+          isAuthenticated: true, 
+          isLocked: false, 
+          isLoading: false, 
+          failedAttempts: 0, 
+          lockoutUntil: null 
+        });
+        localStorage.removeItem('muhafiz_lockout');
         return true;
       }
-      set({ isLoading: false });
+      // Failed attempt logic
+      const newAttempts = state.failedAttempts + 1;
+      let newLockout: number | null = null;
+      if (newAttempts >= 5) {
+        newLockout = Date.now() + 30000; // 30 seconds lockout
+        localStorage.setItem('muhafiz_lockout', newLockout.toString());
+      }
+      set({ 
+        isLoading: false, 
+        failedAttempts: newAttempts, 
+        lockoutUntil: newLockout 
+      });
       return false;
     } catch (err) {
       set({ isLoading: false });
@@ -152,7 +193,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const state = get();
-      const updatedWallets = state.wallets.map(w => 
+      const updatedWallets = state.wallets.map(w =>
         w.id === id ? { ...w, name: newName } : w
       );
       set({ wallets: updatedWallets });
@@ -198,16 +239,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Update wallet balance
       const updatedWallets = state.wallets.map(w => {
         if (w.id === data.walletId) {
-          const newBalance = data.type === 'expense' 
-            ? w.balance - data.amount 
+          const newBalance = data.type === 'expense'
+            ? w.balance - data.amount
             : w.balance + data.amount;
           return { ...w, balance: newBalance };
         }
         return w;
       });
       const newTransactions = [newTx, ...state.transactions];
-      set({ 
-        wallets: updatedWallets, 
+      set({
+        wallets: updatedWallets,
         transactions: newTransactions,
         isLoading: false,
         isTransactionDrawerOpen: false,
@@ -251,7 +292,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const state = get();
-      const updatedCategories = state.categories.map(c => 
+      const updatedCategories = state.categories.map(c =>
         c.id === id ? { ...c, name: newName } : c
       );
       set({ categories: updatedCategories, isLoading: false });

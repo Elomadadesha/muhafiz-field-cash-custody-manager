@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Wallet as WalletType, Category } from '@/types/app';
+import { WalletSchema, CategorySchema } from '@/lib/validation';
 export function SettingsPage() {
   const categories = useAppStore(s => s.categories);
   const wallets = useAppStore(s => s.wallets);
@@ -48,13 +49,18 @@ export function SettingsPage() {
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   // --- Category Handlers ---
   const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    // Validation
+    const validation = CategorySchema.safeParse({ name: newCategoryName });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
     setIsLoading(true);
     try {
       await addCategory(newCategoryName.trim());
       setNewCategoryName('');
       setIsAddCatOpen(false);
-      toast.success('تم إضافة البند بنجاح');
+      toast.success('تم إضافة البند بنجا��');
     } catch (error) {
       toast.error('فشل إضافة البند');
     } finally {
@@ -67,7 +73,13 @@ export function SettingsPage() {
     setIsEditCatOpen(true);
   };
   const handleUpdateCategory = async () => {
-    if (!editingCategory || !editCategoryName.trim()) return;
+    if (!editingCategory) return;
+    // Validation
+    const validation = CategorySchema.safeParse({ name: editCategoryName });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
     setIsLoading(true);
     try {
       await updateCategory(editingCategory.id, editCategoryName.trim());
@@ -98,7 +110,13 @@ export function SettingsPage() {
     setIsEditWalletOpen(true);
   };
   const handleRenameWallet = async () => {
-    if (!editingWallet || !editWalletName.trim()) return;
+    if (!editingWallet) return;
+    // Validation
+    const validation = WalletSchema.pick({ name: true }).safeParse({ name: editWalletName });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
     setIsLoading(true);
     try {
       await renameWallet(editingWallet.id, editWalletName.trim());
@@ -114,7 +132,7 @@ export function SettingsPage() {
   };
   // --- Auth/System Handlers ---
   const handleLogout = () => {
-    if (confirm('هل تريد تسجيل الخروج؟')) {
+    if (confirm('هل تريد تسجيل الخروج��')) {
       logout();
       navigate('/login');
     }
@@ -200,8 +218,8 @@ export function SettingsPage() {
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">عملة التطبيق</span>
               </div>
-              <Select 
-                value={settings.currency} 
+              <Select
+                value={settings.currency}
                 onValueChange={(v: any) => updateSettings({ currency: v })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -233,8 +251,8 @@ export function SettingsPage() {
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">القفل التلقائي</span>
               </div>
-              <Select 
-                value={settings.autoLockMinutes.toString()} 
+              <Select
+                value={settings.autoLockMinutes.toString()}
                 onValueChange={(v) => updateSettings({ autoLockMinutes: parseInt(v) })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -273,7 +291,7 @@ export function SettingsPage() {
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">كلمة مرور التشفير</Label>
-                      <Input 
+                      <Input
                         type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
@@ -301,7 +319,7 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      اختر ملف النسخة الاحتياطية و��دخل كلمة المرور لاسترجاع البيانات.
+                      اختر ملف النسخة الاحتياطية وأدخل كلمة المرور لاسترجاع البيانات.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -310,7 +328,7 @@ export function SettingsPage() {
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
-                      <Input 
+                      <Input
                         type="file"
                         accept=".json"
                         onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
@@ -319,7 +337,7 @@ export function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-right block">كلمة مرور فك التشفير</Label>
-                      <Input 
+                      <Input
                         type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
@@ -378,8 +396,8 @@ export function SettingsPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
-              <div 
-                key={cat.id} 
+              <div
+                key={cat.id}
                 className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
               >
                 <div className="flex items-center gap-3">
@@ -390,9 +408,9 @@ export function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   {/* Edit Button for All Categories */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     onClick={() => openEditCategory(cat)}
                   >
@@ -448,11 +466,11 @@ export function SettingsPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {wallets.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
+              <div className="p-6 text-center text-slate-400 text-sm">لا ت��جد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
-                <div 
-                  key={wallet.id} 
+                <div
+                  key={wallet.id}
                   className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
                 >
                   <div className="flex items-center gap-3">
@@ -465,15 +483,15 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       onClick={() => openEditWallet(wallet)}
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Switch 
+                    <Switch
                       checked={wallet.isActive}
                       onCheckedChange={() => toggleWalletStatus(wallet.id)}
                     />
@@ -488,7 +506,7 @@ export function SettingsPage() {
               <DialogHeader>
                 <DialogTitle className="text-right">تعديل اسم المحفظة</DialogTitle>
                 <DialogDescription className="text-right text-slate-500">
-                  قم بتغيير اسم العُهدة. لن يتأ��ر الرصيد أو العمليات السابقة.
+                  قم بتغيير اسم العُهدة. لن يتأثر الرصيد أو العمليات السابقة.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -521,13 +539,13 @@ export function SettingsPage() {
               جميع البيانات محفوظة على جهازك فقط.
             </p>
           </div>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             className="w-full gap-2 h-12 rounded-xl shadow-lg shadow-red-500/10"
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسج��ل الخروج
+            تسجيل الخروج
           </Button>
         </section>
       </div>

@@ -14,9 +14,10 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, Plus, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
+import { TransactionSchema, CategorySchema } from '@/lib/validation';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
-  if (name.includes('مواص��ات')) return <Bus className="w-5 h-5" />;
+  if (name.includes('مواصلات')) return <Bus className="w-5 h-5" />;
   if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
@@ -70,16 +71,24 @@ export function TransactionDrawer() {
       toast.error('الرجاء اختيار المحفظة');
       return;
     }
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('الرجاء إدخال مبلغ صحيح');
+    // Validate Transaction Data
+    const validation = TransactionSchema.safeParse({
+      amount: parseFloat(amount),
+      notes,
+      date: date
+    });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
     let finalCategoryId = categoryId;
     let finalCustomName = undefined;
     if (type === 'expense') {
       if (isCustomCategory) {
-        if (!customCategoryName.trim()) {
-          toast.error('الرجاء كتابة ا��م البند');
+        // Validate Custom Category Name
+        const catValidation = CategorySchema.safeParse({ name: customCategoryName });
+        if (!catValidation.success) {
+          toast.error(catValidation.error.errors[0].message);
           return;
         }
         if (saveCustomCategory) {
@@ -113,10 +122,10 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       });
-      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
+      toast.success(type === 'expense' ? 'تم تسجيل الم��روف' : 'تم إضافة الرصيد');
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثنا�� حفظ العملية');
+      toast.error('حدث خطأ أثناء حفظ العملية');
     }
   };
   const handleCategorySelect = (id: string) => {
@@ -237,7 +246,7 @@ export function TransactionDrawer() {
                     )}>
                       <PenLine className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخصص</span>
+                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخص��</span>
                   </button>
                 </div>
                 {/* Custom Category Input Area */}
@@ -256,7 +265,7 @@ export function TransactionDrawer() {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-                          حفظ في القائمة لاست��دامه مستقبلاً
+                          حفظ في القائمة لاستخدامه مستق��لاً
                         </Label>
                         <Switch
                           id="save-category"
@@ -302,7 +311,7 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفا��يل..."
+                  placeholder="أضف تفاصيل..."
                   className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right bg-white dark:bg-slate-800"
                 />
               </div>
@@ -319,7 +328,7 @@ export function TransactionDrawer() {
                   : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
               )}
             >
-              {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إ��افة الرصيد')}
+              {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد')}
             </Button>
           </DrawerFooter>
         </div>
