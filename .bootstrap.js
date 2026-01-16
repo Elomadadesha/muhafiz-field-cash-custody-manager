@@ -80,7 +80,8 @@ function runSetupCommands() {
     const commands = [
     "bun add html-to-image@^1.11.0",
     "bun add vite-plugin-pwa@^0.19.0",
-    "bun add @fontsource/tajawal@^5.0.0"
+    "bun add @fontsource/tajawal@^5.0.0",
+    "bun add recharts"
 ];
     
     if (commands.length === 0) {
