@@ -6,7 +6,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock } from 'lucide-react';
@@ -41,7 +41,7 @@ export function SettingsPage() {
       await addCategory(newCategoryName.trim());
       setNewCategoryName('');
       setIsAddCatOpen(false);
-      toast.success('تم إضافة البند بنجاح');
+      toast.success('تم ��ضافة البند بنجاح');
     } catch (error) {
       toast.error('فشل إضافة البند');
     } finally {
@@ -49,7 +49,7 @@ export function SettingsPage() {
     }
   };
   const handleDeleteCategory = async (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا ��لبند؟')) {
+    if (confirm('هل أنت متأكد من حذف هذا البند؟')) {
       try {
         await deleteCategory(id);
         toast.success('تم حذف البند');
@@ -66,7 +66,7 @@ export function SettingsPage() {
   };
   const handleBackup = async () => {
     if (!backupPassword) {
-      toast.error('الرجاء إدخال ك��مة مرور للتشفير');
+      toast.error('الرجاء إدخ��ل كلمة مرور للتشفير');
       return;
     }
     setIsLoading(true);
@@ -88,7 +88,7 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الاحتياطية بنجاح');
+      toast.success('تم تصدير النسخة الا��تياطية بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
@@ -105,7 +105,7 @@ export function SettingsPage() {
       const text = await restoreFile.text();
       const data = await decryptData(text, backupPassword);
       await restoreData(data);
-      toast.success('تم استعادة البيانات بنجاح');
+      toast.success('تم استعادة الب��انات بنجاح');
       setIsRestoreOpen(false);
       setBackupPassword('');
       setRestoreFile(null);
@@ -119,8 +119,8 @@ export function SettingsPage() {
   return (
     <RtlWrapper>
       <header className="px-6 pt-8 pb-4">
-        <h1 className="text-xl font-bold text-slate-900">الإعدادات</h1>
-        <p className="text-sm text-slate-500">تخصيص التطبيق وال��مان</p>
+        <h1 className="text-xl font-bold text-slate-900">الإع��ادات</h1>
+        <p className="text-sm text-slate-500">تخصيص التطبيق والأمان</p>
       </header>
       <div className="flex-1 overflow-y-auto px-6 pb-24 space-y-8">
         {/* Security Section */}
@@ -147,7 +147,7 @@ export function SettingsPage() {
                   <SelectItem value="0">معطل</SelectItem>
                   <SelectItem value="1">دقيقة واحدة</SelectItem>
                   <SelectItem value="2">دقيقتين</SelectItem>
-                  <SelectItem value="5">5 دقائ��</SelectItem>
+                  <SelectItem value="5">5 دقائق</SelectItem>
                   <SelectItem value="10">10 دقائق</SelectItem>
                 </SelectContent>
               </Select>
@@ -166,6 +166,9 @@ export function SettingsPage() {
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
+                    <DialogDescription className="text-right text-slate-500">
+                      قم بإنشاء ملف نسخة احتياطية مشفر لحفظ بياناتك بأمان.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-slate-500">
@@ -184,7 +187,7 @@ export function SettingsPage() {
                   </div>
                   <DialogFooter>
                     <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600">
-                      {isLoading ? 'جار�� التصدير...' : 'تصدير وحفظ'}
+                      {isLoading ? 'جاري التصدير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -200,6 +203,9 @@ export function SettingsPage() {
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
+                    <DialogDescription className="text-right text-slate-500">
+                      اختر ملف النسخة الاحتياطية وأدخل كلمة المرور لاسترجاع البيانات.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">
@@ -246,12 +252,15 @@ export function SettingsPage() {
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 text-xs">
                   <Plus className="w-3 h-3 ml-1" />
-                  ��ضافة
+                  إضافة
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
                 <DialogHeader>
-                  <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
+                  <DialogTitle className="text-right">إضافة بند صرف جدي��</DialogTitle>
+                  <DialogDescription className="text-right text-slate-500">
+                    أدخل اسم البند الجديد لإضافته إلى قائمة المصروفات.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
                   <Label className="text-right block mb-2">اسم البند</Label>
@@ -272,15 +281,15 @@ export function SettingsPage() {
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
-              <div 
-                key={cat.id} 
+              <div
+                key={cat.id}
                 className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50' : ''}`}
               >
                 <span className="text-sm font-medium text-slate-700">{cat.name}</span>
                 {cat.isSystem ? (
                   <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-full">نظام</span>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => handleDeleteCategory(cat.id)}
                     className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors"
                   >
@@ -302,15 +311,15 @@ export function SettingsPage() {
               <div className="p-4 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
-                <div 
-                  key={wallet.id} 
+                <div
+                  key={wallet.id}
                   className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50' : ''}`}
                 >
                   <div>
                     <p className="text-sm font-medium text-slate-700">{wallet.name}</p>
                     <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} ر.س</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={wallet.isActive}
                     onCheckedChange={() => toggleWalletStatus(wallet.id)}
                   />
@@ -324,16 +333,16 @@ export function SettingsPage() {
           <div className="bg-slate-50 rounded-xl p-4 mb-4">
             <div className="flex items-center gap-2 text-slate-600 mb-2">
               <Info className="w-4 h-4" />
-              <span className="text-sm font-bold">عن التطبيق</span>
+              <span className="text-sm font-bold">عن التطبي��</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
               تطبيق مُحافظ - الإصدار المحلي الآمن v2.0.0
               <br />
-              جميع البيانات محفوظة على جهازك فقط.
+              جميع البيانات محفوظة على جها��ك فقط.
             </p>
           </div>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             className="w-full gap-2"
             onClick={handleLogout}
           >

@@ -5,7 +5,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { WalletCard } from '@/components/wallet/WalletCard';
 import { Bell, Search, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -36,14 +36,14 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بنجاح');
+    toast.success('تم إض��فة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
       {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">مرحباً، أسمى مصطفى</h1>
+          <h1 className="text-xl font-bold text-slate-900">مرح��اً، أسمى مصطفى</h1>
           <p className="text-sm text-slate-500">
             {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
           </p>
@@ -64,7 +64,7 @@ export function DashboardPage() {
           <div className="relative z-10">
             <p className="text-slate-400 text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-              إ��مالي الرصيد الحالي
+              إجمالي الرصيد ال��الي
             </p>
             <div className="flex items-baseline gap-2 mb-6">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums">
@@ -87,7 +87,7 @@ export function DashboardPage() {
                   <div className="p-1 rounded-full bg-blue-500/20 text-blue-300">
                     <ArrowDownLeft className="w-3 h-3" />
                   </div>
-                  <p className="text-xs text-slate-300">العُهد النشط��</p>
+                  <p className="text-xs text-slate-300">العُهد النشطة</p>
                 </div>
                 <p className="text-lg font-semibold tabular-nums">{wallets.filter(w => w.isActive).length}</p>
               </div>
@@ -96,7 +96,7 @@ export function DashboardPage() {
         </div>
         {/* Quick Actions */}
         <div>
-          <h3 className="text-sm font-bold text-slate-900 mb-3 px-1">إجراءات سريعة</h3>
+          <h3 className="text-sm font-bold text-slate-900 mb-3 px-1">إجراءات ��ريعة</h3>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => openTransactionDrawer()}
@@ -132,12 +132,15 @@ export function DashboardPage() {
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 rounded-full px-3">
                   <Plus className="w-4 h-4" />
-                  <span>��ديدة</span>
+                  <span>جديدة</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة عُهدة جديدة</DialogTitle>
+                  <DialogDescription className="text-right text-slate-500">
+                    أدخل اسم العُهدة والرصيد الافتتاحي لإنشاء محفظة جديدة.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
