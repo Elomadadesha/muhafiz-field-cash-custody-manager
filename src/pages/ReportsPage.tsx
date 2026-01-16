@@ -4,7 +4,7 @@ import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
-import { Share2, FileSpreadsheet } from 'lucide-react';
+import { Share2, FileSpreadsheet, Filter } from 'lucide-react';
 import { format, isSameDay, isSameWeek, isSameMonth } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/app';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateDailyTreasuryReport } from '@/lib/excel';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 type TimeRange = 'today' | 'week' | 'month' | 'all';
 // Blue-centric palette
 const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
@@ -24,20 +25,26 @@ export function ReportsPage() {
   const settings = useAppStore(s => s.settings);
   const currency = CURRENCIES[settings.currency];
   const [range, setRange] = useState<TimeRange>('today');
+  const [selectedWalletFilter, setSelectedWalletFilter] = useState<string>('all');
   const reportRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
-  // Filter transactions based on range
+  // Filter transactions based on range and wallet
   const filteredTransactions = useMemo(() => {
     const now = new Date();
     return transactions.filter(t => {
+      // Wallet Filter
+      if (selectedWalletFilter !== 'all' && t.walletId !== selectedWalletFilter) {
+        return false;
+      }
+      // Date Filter
       const date = new Date(t.date);
       if (range === 'today') return isSameDay(date, now);
       if (range === 'week') return isSameWeek(date, now, { weekStartsOn: 6 });
       if (range === 'month') return isSameMonth(date, now);
       return true;
     }).sort((a, b) => b.date - a.date);
-  }, [transactions, range]);
+  }, [transactions, range, selectedWalletFilter]);
   // Calculate summaries for General Report
   const summary = useMemo(() => {
     const income = filteredTransactions
@@ -98,8 +105,10 @@ export function ReportsPage() {
     return result;
   }, [filteredTransactions]);
   const generateTextReport = () => {
-    const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
-    let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
+    const dateStr = range === 'all' ? 'ج��يع العمليات' : format(new Date(), 'PPP', { locale: arSA });
+    const walletStr = selectedWalletFilter === 'all' ? 'جميع العُهد' : (wallets.find(w => w.id === selectedWalletFilter)?.name || 'عُهدة محددة');
+    let text = `*ت��رير المصروفات - ${dateStr}*\n`;
+    text += `📁 العُهدة: ${walletStr}\n\n`;
     text += `💰 الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
     text += `💸 المصروفات: ${summary.expense.toLocaleString()} ${currency.symbol}\n`;
     text += `📊 الصافي: ${summary.net.toLocaleString()} ${currency.symbol}\n\n`;
@@ -176,7 +185,7 @@ export function ReportsPage() {
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالي��</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
         </div>
         {activeTab === 'general' ? (
           <Button
@@ -204,7 +213,27 @@ export function ReportsPage() {
         )}
       </header>
       {/* Filters */}
-      <div className="px-6 mb-4">
+      <div className="px-6 mb-4 space-y-3">
+        {/* Wallet Filter */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+            <Filter className="w-4 h-4" />
+          </div>
+          <Select value={selectedWalletFilter} onValueChange={setSelectedWalletFilter}>
+            <SelectTrigger className="flex-1 h-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-right flex-row-reverse" dir="rtl">
+              <SelectValue placeholder="جميع العُهد" />
+            </SelectTrigger>
+            <SelectContent dir="rtl">
+              <SelectItem value="all" className="text-right flex-row-reverse">جميع العُهد</SelectItem>
+              {wallets.map(w => (
+                <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Time Range Filter */}
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
           {[
             { id: 'today', label: 'اليوم' },
@@ -241,6 +270,11 @@ export function ReportsPage() {
                 <p className="text-slate-900 dark:text-white font-bold">
                   {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
                 </p>
+                {selectedWalletFilter !== 'all' && (
+                  <p className="text-blue-600 text-xs mt-1 font-medium">
+                    {wallets.find(w => w.id === selectedWalletFilter)?.name}
+                  </p>
+                )}
               </div>
               {/* Summary Cards */}
               <div className="grid grid-cols-3 gap-3 mb-8">
@@ -297,7 +331,7 @@ export function ReportsPage() {
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
                 {filteredTransactions.length === 0 ? (
                   <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                    <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
+                    <p className="text-slate-400 text-sm">لا توج�� عمليات في هذه الفترة</p>
                   </div>
                 ) : (
                   <div className="space-y-3">

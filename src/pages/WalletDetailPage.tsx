@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Filter } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -21,22 +21,34 @@ export function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const wallet = useAppStore(s => s.wallets.find(w => w.id === id));
-  const transactions = useAppStore(s => s.transactions.filter(t => t.walletId === id).sort((a, b) => b.date - a.date));
+  const allTransactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
   const settings = useAppStore(s => s.settings);
   const openTransactionDrawer = useAppStore(s => s.openTransactionDrawer);
   const deleteTransaction = useAppStore(s => s.deleteTransaction);
   const currency = CURRENCIES[settings.currency];
+  const [filterType, setFilterType] = useState<'all' | 'expense' | 'deposit'>('all');
+  // Filter transactions for this wallet and by type
+  const filteredTransactions = useMemo(() => {
+    if (!id) return [];
+    return allTransactions
+      .filter(t => {
+        if (t.walletId !== id) return false;
+        if (filterType !== 'all' && t.type !== filterType) return false;
+        return true;
+      })
+      .sort((a, b) => b.date - a.date);
+  }, [allTransactions, id, filterType]);
   // Group transactions by date
   const groupedTransactions = useMemo(() => {
     const groups: Record<string, Transaction[]> = {};
-    transactions.forEach(tx => {
+    filteredTransactions.forEach(tx => {
       const dateKey = format(tx.date, 'yyyy-MM-dd');
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(tx);
     });
     return groups;
-  }, [transactions]);
+  }, [filteredTransactions]);
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   if (!wallet) {
     return (
@@ -49,7 +61,7 @@ export function WalletDetailPage() {
     );
   }
   const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return '��غذية رصيد';
+    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
@@ -74,10 +86,10 @@ export function WalletDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{wallet.name}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العملي��ت</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليات</p>
         </div>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={() => openTransactionDrawer(wallet.id)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
         >
@@ -102,10 +114,48 @@ export function WalletDetailPage() {
       </div>
       {/* Transactions List */}
       <div className="flex-1 bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-[0_-4px_20px_rgba(0,0,0,0.03)] px-6 pt-8 pb-safe overflow-y-auto">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">سجل العمليات</h3>
-        {transactions.length === 0 ? (
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">سجل العمليات</h3>
+          {/* Filter Controls */}
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setFilterType('all')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                filterType === 'all' 
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" 
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+              )}
+            >
+              الكل
+            </button>
+            <button
+              onClick={() => setFilterType('expense')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                filterType === 'expense' 
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm" 
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+              )}
+            >
+              مصروفات
+            </button>
+            <button
+              onClick={() => setFilterType('deposit')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                filterType === 'deposit' 
+                  ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm" 
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+              )}
+            >
+              إيداعات
+            </button>
+          </div>
+        </div>
+        {filteredTransactions.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
-            <p className="text-slate-400 text-sm">لا توجد عمليات مسجلة ل��ذه المحفظة</p>
+            <p className="text-slate-400 text-sm">لا توجد عمليات مطابقة للفلتر</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -125,8 +175,8 @@ export function WalletDetailPage() {
                     >
                       <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
-                        tx.type === 'expense' 
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-500" 
+                        tx.type === 'expense'
+                          ? "bg-red-50 dark:bg-red-900/20 text-red-500"
                           : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
                       )}>
                         {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
