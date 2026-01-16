@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import { SearchDialog } from '@/components/search/SearchDialog';
 export function DashboardPage() {
   const wallets = useAppStore(s => s.wallets);
   const addWallet = useAppStore(s => s.addWallet);
@@ -23,6 +24,7 @@ export function DashboardPage() {
   const settings = useAppStore(s => s.settings);
   const openTransactionDrawer = useAppStore(s => s.openTransactionDrawer);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
   const navigate = useNavigate();
@@ -41,10 +43,11 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة ��نجاح');
+    toast.success('تم إضافة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
+      <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-20">
         <div className="flex items-center gap-3">
@@ -56,10 +59,18 @@ export function DashboardPage() {
             </p>
           </div>
         </div>
-        <button className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+          <button className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors relative">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
+          </button>
+        </div>
       </header>
       {/* Main Content */}
       <motion.main
@@ -77,7 +88,7 @@ export function DashboardPage() {
           <div className="relative z-10">
             <p className="text-blue-100 text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]"></span>
-              إجمالي الرصيد الحالي
+              إجمال�� الرصيد الحالي
             </p>
             <div className="flex items-baseline gap-2 mb-8">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums drop-shadow-sm">
@@ -211,6 +222,13 @@ export function DashboardPage() {
               </div>
               <h3 className="text-slate-900 dark:text-white font-medium mb-1">لا توجد عُهد حالياً</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm">قم بإضافة عُهدة جديدة للبدء</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setIsAddOpen(true)}
+              >
+                إضافة عُهدة
+              </Button>
             </div>
           )}
         </div>

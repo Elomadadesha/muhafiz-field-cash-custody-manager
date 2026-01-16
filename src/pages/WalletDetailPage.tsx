@@ -3,12 +3,19 @@ import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Transaction } from '@/types/app';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 export function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -17,6 +24,7 @@ export function WalletDetailPage() {
   const categories = useAppStore(s => s.categories);
   const settings = useAppStore(s => s.settings);
   const openTransactionDrawer = useAppStore(s => s.openTransactionDrawer);
+  const deleteTransaction = useAppStore(s => s.deleteTransaction);
   const currency = CURRENCIES[settings.currency];
   if (!wallet) {
     return (
@@ -32,6 +40,12 @@ export function WalletDetailPage() {
     if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
+  };
+  const handleDelete = async (txId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
+      await deleteTransaction(txId);
+      toast.success('تم ��ذف العملية بنجاح');
+    }
   };
   return (
     <RtlWrapper>
@@ -83,7 +97,7 @@ export function WalletDetailPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-start gap-4 group p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                className="flex items-start gap-4 group p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative"
               >
                 <div className={cn(
                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
@@ -108,9 +122,27 @@ export function WalletDetailPage() {
                       <CalendarIcon className="w-3 h-3" />
                       <span>{format(tx.date, "d MMM, h:mm a", { locale: arSA })}</span>
                     </div>
-                    {tx.notes && <span className="truncate max-w-[120px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{tx.notes}</span>}
+                    {tx.notes && <span className="truncate max-w-[100px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{tx.notes}</span>}
                   </div>
                 </div>
+                {/* Actions Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" dir="rtl">
+                    <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id)} className="gap-2 cursor-pointer">
+                      <Pencil className="w-4 h-4" />
+                      <span>تعديل</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="gap-2 text-red-600 focus:text-red-600 cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
+                      <span>حذف</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </motion.div>
             ))}
           </div>

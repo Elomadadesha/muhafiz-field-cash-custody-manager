@@ -20,6 +20,7 @@ interface AppState {
   // UI State
   isTransactionDrawerOpen: boolean;
   selectedWalletId: string | null;
+  transactionIdToEdit: string | null;
   // Initialization
   init: () => Promise<void>;
   // Auth Actions
@@ -33,9 +34,11 @@ interface AppState {
   renameWallet: (id: string, newName: string) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
   // Transaction Actions
-  openTransactionDrawer: (walletId?: string) => void;
+  openTransactionDrawer: (walletId?: string, transactionId?: string) => void;
   closeTransactionDrawer: () => void;
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+  editTransaction: (id: string, data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
   // Category Actions
   addCategory: (name: string) => Promise<string | undefined>; // Returns the new ID
   updateCategory: (id: string, newName: string) => Promise<void>;
@@ -60,6 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
   isTransactionDrawerOpen: false,
   selectedWalletId: null,
+  transactionIdToEdit: null,
   init: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -90,7 +94,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
@@ -126,12 +130,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const storedHash = await db.getPasswordHash();
       const inputHash = await hashPassword(password);
       if (storedHash === inputHash) {
-        set({ 
-          isAuthenticated: true, 
-          isLocked: false, 
-          isLoading: false, 
-          failedAttempts: 0, 
-          lockoutUntil: null 
+        set({
+          isAuthenticated: true,
+          isLocked: false,
+          isLoading: false,
+          failedAttempts: 0,
+          lockoutUntil: null
         });
         localStorage.removeItem('muhafiz_lockout');
         return true;
@@ -143,10 +147,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         newLockout = Date.now() + 30000; // 30 seconds lockout
         localStorage.setItem('muhafiz_lockout', newLockout.toString());
       }
-      set({ 
-        isLoading: false, 
-        failedAttempts: newAttempts, 
-        lockoutUntil: newLockout 
+      set({
+        isLoading: false,
+        failedAttempts: newAttempts,
+        lockoutUntil: newLockout
       });
       return false;
     } catch (err) {
@@ -221,11 +225,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       lastUpdated: Date.now()
     });
   },
-  openTransactionDrawer: (walletId) => {
-    set({ isTransactionDrawerOpen: true, selectedWalletId: walletId || null });
+  openTransactionDrawer: (walletId, transactionId) => {
+    set({
+      isTransactionDrawerOpen: true,
+      selectedWalletId: walletId || null,
+      transactionIdToEdit: transactionId || null
+    });
   },
   closeTransactionDrawer: () => {
-    set({ isTransactionDrawerOpen: false, selectedWalletId: null });
+    set({
+      isTransactionDrawerOpen: false,
+      selectedWalletId: null,
+      transactionIdToEdit: null
+    });
   },
   addTransaction: async (data) => {
     set({ isLoading: true });
@@ -262,6 +274,90 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       set({ isLoading: false, error: 'فشل إضافة العملية' });
+    }
+  },
+  editTransaction: async (id, data) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const oldTx = state.transactions.find(t => t.id === id);
+      if (!oldTx) {
+        throw new Error("Transaction not found");
+      }
+      // 1. Revert old transaction effect
+      let wallets = [...state.wallets];
+      const oldWalletIndex = wallets.findIndex(w => w.id === oldTx.walletId);
+      if (oldWalletIndex !== -1) {
+        const w = wallets[oldWalletIndex];
+        // If expense, add back. If deposit, subtract.
+        const revertAmount = oldTx.type === 'expense' ? oldTx.amount : -oldTx.amount;
+        wallets[oldWalletIndex] = { ...w, balance: w.balance + revertAmount };
+      }
+      // 2. Apply new transaction effect
+      // Note: If walletId changed, we apply to new wallet. If same, we apply to the already modified wallet.
+      const newWalletIndex = wallets.findIndex(w => w.id === data.walletId);
+      if (newWalletIndex !== -1) {
+        const w = wallets[newWalletIndex];
+        // If expense, subtract. If deposit, add.
+        const applyAmount = data.type === 'expense' ? -data.amount : data.amount;
+        wallets[newWalletIndex] = { ...w, balance: w.balance + applyAmount };
+      }
+      // 3. Update transaction record
+      const updatedTx: Transaction = {
+        ...oldTx,
+        ...data
+      };
+      const updatedTransactions = state.transactions.map(t => t.id === id ? updatedTx : t);
+      set({
+        wallets,
+        transactions: updatedTransactions,
+        isLoading: false,
+        isTransactionDrawerOpen: false,
+        transactionIdToEdit: null,
+        selectedWalletId: null
+      });
+      await db.saveData({
+        wallets,
+        transactions: updatedTransactions,
+        categories: state.categories,
+        lastUpdated: Date.now()
+      });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تعديل العملية' });
+    }
+  },
+  deleteTransaction: async (id) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx) {
+        throw new Error("Transaction not found");
+      }
+      // 1. Revert transaction effect on wallet
+      const wallets = state.wallets.map(w => {
+        if (w.id === tx.walletId) {
+          // If expense, add back. If deposit, subtract.
+          const revertAmount = tx.type === 'expense' ? tx.amount : -tx.amount;
+          return { ...w, balance: w.balance + revertAmount };
+        }
+        return w;
+      });
+      // 2. Remove transaction
+      const updatedTransactions = state.transactions.filter(t => t.id !== id);
+      set({
+        wallets,
+        transactions: updatedTransactions,
+        isLoading: false
+      });
+      await db.saveData({
+        wallets,
+        transactions: updatedTransactions,
+        categories: state.categories,
+        lastUpdated: Date.now()
+      });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل حذف العملية' });
     }
   },
   addCategory: async (name: string) => {

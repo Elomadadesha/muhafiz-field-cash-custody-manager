@@ -12,13 +12,13 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, Plus, PenLine } from 'lucide-react';
+import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { TransactionSchema, CategorySchema } from '@/lib/validation';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
-  if (name.includes('مواصلات')) return <Bus className="w-5 h-5" />;
-  if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
+  if (name.includes('��واصلات')) return <Bus className="w-5 h-5" />;
+  if (name.includes('وقو��')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
   if (name.includes('قطع')) return <Settings className="w-5 h-5" />;
@@ -30,7 +30,10 @@ export function TransactionDrawer() {
   const wallets = useAppStore(s => s.wallets);
   const categories = useAppStore(s => s.categories);
   const selectedWalletId = useAppStore(s => s.selectedWalletId);
+  const transactionIdToEdit = useAppStore(s => s.transactionIdToEdit);
+  const transactions = useAppStore(s => s.transactions);
   const addTransaction = useAppStore(s => s.addTransaction);
+  const editTransaction = useAppStore(s => s.editTransaction);
   const addCategory = useAppStore(s => s.addCategory);
   const isLoading = useAppStore(s => s.isLoading);
   const settings = useAppStore(s => s.settings);
@@ -45,27 +48,49 @@ export function TransactionDrawer() {
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryName, setCustomCategoryName] = useState('');
   const [saveCustomCategory, setSaveCustomCategory] = useState(false);
-  // Sync selected wallet from store
+  // Sync selected wallet from store or handle edit mode
   useEffect(() => {
     if (isOpen) {
-      if (selectedWalletId) {
-        setWalletId(selectedWalletId);
-      } else if (wallets.length > 0 && !walletId) {
-        // Default to first active wallet if none selected
-        const firstActive = wallets.find(w => w.isActive);
-        if (firstActive) setWalletId(firstActive.id);
+      if (transactionIdToEdit) {
+        // EDIT MODE
+        const tx = transactions.find(t => t.id === transactionIdToEdit);
+        if (tx) {
+          setType(tx.type);
+          setWalletId(tx.walletId);
+          setAmount(tx.amount.toString());
+          setNotes(tx.notes || '');
+          setDate(new Date(tx.date));
+          if (tx.categoryId === 'custom' || (tx.customCategoryName && !categories.find(c => c.id === tx.categoryId))) {
+            setIsCustomCategory(true);
+            setCustomCategoryName(tx.customCategoryName || '');
+            setCategoryId('');
+          } else {
+            setIsCustomCategory(false);
+            setCategoryId(tx.categoryId);
+            setCustomCategoryName('');
+          }
+        }
+      } else {
+        // ADD MODE
+        if (selectedWalletId) {
+          setWalletId(selectedWalletId);
+        } else if (wallets.length > 0 && !walletId) {
+          // Default to first active wallet if none selected
+          const firstActive = wallets.find(w => w.isActive);
+          if (firstActive) setWalletId(firstActive.id);
+        }
+        // Reset other fields
+        setAmount('');
+        setNotes('');
+        setCategoryId('');
+        setDate(new Date());
+        setType('expense');
+        setIsCustomCategory(false);
+        setCustomCategoryName('');
+        setSaveCustomCategory(false);
       }
-      // Reset other fields
-      setAmount('');
-      setNotes('');
-      setCategoryId('');
-      setDate(new Date());
-      setType('expense');
-      setIsCustomCategory(false);
-      setCustomCategoryName('');
-      setSaveCustomCategory(false);
     }
-  }, [isOpen, selectedWalletId, wallets, walletId]);
+  }, [isOpen, selectedWalletId, wallets, walletId, transactionIdToEdit, transactions, categories]);
   const handleSubmit = async () => {
     if (!walletId) {
       toast.error('الرجاء اختيار المحفظة');
@@ -95,7 +120,7 @@ export function TransactionDrawer() {
           // Add to permanent list
           const newId = await addCategory(customCategoryName.trim());
           if (!newId) {
-            toast.error('ف��ل إضافة البند الجديد');
+            toast.error('فشل إضافة البند الجديد');
             return;
           }
           finalCategoryId = newId;
@@ -113,7 +138,7 @@ export function TransactionDrawer() {
       finalCategoryId = 'deposit_sys';
     }
     try {
-      await addTransaction({
+      const txData = {
         walletId,
         amount: parseFloat(amount),
         type,
@@ -121,11 +146,17 @@ export function TransactionDrawer() {
         customCategoryName: finalCustomName,
         date: date ? date.getTime() : Date.now(),
         notes
-      });
-      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
+      };
+      if (transactionIdToEdit) {
+        await editTransaction(transactionIdToEdit, txData);
+        toast.success('تم تعديل الع��لية بنجاح');
+      } else {
+        await addTransaction(txData);
+        toast.success(type === 'expense' ? 'تم تسجيل المصر��ف' : 'تم إضافة الرصيد');
+      }
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثن��ء حفظ العملية');
+      toast.error('حدث خطأ أثناء ��فظ العملية');
     }
   };
   const handleCategorySelect = (id: string) => {
@@ -141,9 +172,11 @@ export function TransactionDrawer() {
       <DrawerContent className="max-h-[95vh]" dir="rtl">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader>
-            <DrawerTitle className="text-center text-xl font-bold">تسجيل عملية جديدة</DrawerTitle>
+            <DrawerTitle className="text-center text-xl font-bold">
+              {transactionIdToEdit ? 'تعديل العملية' : 'تسجيل عملية جديدة'}
+            </DrawerTitle>
             <DrawerDescription className="text-center text-slate-500">
-              أدخل تفاصيل العملية المالية أدناه
+              {transactionIdToEdit ? 'قم بتعديل تفاصيل العملية أدناه' : '��دخل تفاصيل العملية المالية أدناه'}
             </DrawerDescription>
           </DrawerHeader>
           <div className="p-4 space-y-6 overflow-y-auto max-h-[75vh]">
@@ -183,7 +216,7 @@ export function TransactionDrawer() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="text-center text-4xl font-bold h-20 rounded-2xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-primary/20 ltr-placeholder bg-slate-50 dark:bg-slate-900"
-                  autoFocus
+                  autoFocus={!transactionIdToEdit}
                 />
                 <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-lg">{currency.symbol}</span>
               </div>
@@ -196,7 +229,7 @@ export function TransactionDrawer() {
                   <SelectValue placeholder="اختر المحفظة" />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
-                  {wallets.filter(w => w.isActive).map(w => (
+                  {wallets.filter(w => w.isActive || w.id === walletId).map(w => (
                     <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse py-3">
                       <span className="font-medium">{w.name}</span>
                       <span className="text-slate-400 text-xs mr-2">({w.balance.toLocaleString()} {currency.symbol})</span>
@@ -263,16 +296,18 @@ export function TransactionDrawer() {
                           autoFocus
                         />
                       </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-                          حفظ ��ي القائمة لاستخدامه مستقبلاً
-                        </Label>
-                        <Switch
-                          id="save-category"
-                          checked={saveCustomCategory}
-                          onCheckedChange={setSaveCustomCategory}
-                        />
-                      </div>
+                      {!transactionIdToEdit && (
+                        <div className="flex items-center justify-between pt-2">
+                          <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                            حفظ في القائمة لاستخدامه مستقبلاً
+                          </Label>
+                          <Switch
+                            id="save-category"
+                            checked={saveCustomCategory}
+                            onCheckedChange={setSaveCustomCategory}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -328,7 +363,7 @@ export function TransactionDrawer() {
                   : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
               )}
             >
-              {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد')}
+              {isLoading ? 'جاري الحفظ...' : (transactionIdToEdit ? 'حفظ التع��يلات' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد'))}
             </Button>
           </DrawerFooter>
         </div>
