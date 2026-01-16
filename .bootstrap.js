@@ -84,7 +84,8 @@ function runSetupCommands() {
     "bun add recharts",
     "bun add idb-keyval",
     "bun add uuid idb-keyval",
-    "bun add @types/uuid"
+    "bun add @types/uuid",
+    "bun add framer-motion"
 ];
     
     if (commands.length === 0) {
