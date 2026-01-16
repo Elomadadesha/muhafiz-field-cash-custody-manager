@@ -4,8 +4,8 @@ import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Filter, Copy } from 'lucide-react';
-import { format, isToday, isYesterday } from 'date-fns';
+import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Copy, Receipt, TrendingUp } from 'lucide-react';
+import { format, isToday, isYesterday, subDays, isSameDay } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -15,8 +15,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { TransactionReceipt } from '@/components/transaction/TransactionReceipt';
 export function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -28,6 +31,9 @@ export function WalletDetailPage() {
   const deleteTransaction = useAppStore(s => s.deleteTransaction);
   const currency = CURRENCIES[settings.currency];
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'deposit'>('all');
+  // Receipt State
+  const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   // Filter transactions for this wallet and by type
   const filteredTransactions = useMemo(() => {
     if (!id) return [];
@@ -49,28 +55,54 @@ export function WalletDetailPage() {
     });
     return groups;
   }, [filteredTransactions]);
+  // Chart Data: Last 7 Days Expenses for THIS wallet
+  const chartData = useMemo(() => {
+    if (!id) return [];
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(new Date(), i);
+      const dayExpenses = allTransactions
+        .filter(t => 
+          t.walletId === id && 
+          t.type === 'expense' && 
+          isSameDay(new Date(t.date), date)
+        )
+        .reduce((acc, t) => acc + t.amount, 0);
+      data.push({
+        name: format(date, 'EEEE', { locale: arSA }),
+        shortName: format(date, 'EEE', { locale: arSA }),
+        date: format(date, 'd MMM', { locale: arSA }),
+        amount: dayExpenses
+      });
+    }
+    return data;
+  }, [allTransactions, id]);
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   if (!wallet) {
     return (
       <RtlWrapper className="justify-center items-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجو��ة</h2>
+          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجودة</h2>
           <Button onClick={() => navigate('/dashboard')} className="mt-4">عودة للرئيسية</Button>
         </div>
       </RtlWrapper>
     );
   }
   const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return 'تغ��ية رصيد';
+    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'transfer_sys') return 'تحويل أموال';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const handleDelete = async (txId: string) => {
-    if (confirm('هل أنت متأ��د من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
+    if (confirm('هل أنت متأك�� من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
       await deleteTransaction(txId);
       toast.success('تم حذف العملية بنجاح');
     }
+  };
+  const handleViewReceipt = (tx: Transaction) => {
+    setSelectedTxForReceipt(tx);
+    setIsReceiptOpen(true);
   };
   const getDateLabel = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -87,10 +119,10 @@ export function WalletDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{wallet.name}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليات</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليا��</p>
         </div>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={() => openTransactionDrawer(wallet.id)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
         >
@@ -113,13 +145,68 @@ export function WalletDetailPage() {
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
         </div>
       </div>
+      {/* Wallet Analytics Chart */}
+      <div className="px-6 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">مصروفات العُهدة</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">آخر 7 أيام</p>
+            </div>
+          </div>
+          <div className="h-28 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorWalletExpense" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="shortName" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  dy={10}
+                  interval="preserveStartEnd"
+                />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-xl border border-slate-700">
+                          <p className="font-bold mb-1">{payload[0].payload.date}</p>
+                          <p className="font-mono text-red-300">-{Number(payload[0].value).toLocaleString()} {currency.symbol}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  fillOpacity={1} 
+                  fill="url(#colorWalletExpense)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
       {/* Transactions List */}
       <div className="flex-1 bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-[0_-4px_20px_rgba(0,0,0,0.03)] px-6 pt-8 pb-safe overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">سجل العمليات</h3>
           {/* Filter Controls */}
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-            <button
+            <button 
               onClick={() => setFilterType('all')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
@@ -130,7 +217,7 @@ export function WalletDetailPage() {
             >
               الكل
             </button>
-            <button
+            <button 
               onClick={() => setFilterType('expense')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
@@ -141,7 +228,7 @@ export function WalletDetailPage() {
             >
               مصروفات
             </button>
-            <button
+            <button 
               onClick={() => setFilterType('deposit')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
@@ -208,6 +295,11 @@ export function WalletDetailPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="text-right">
+                          <DropdownMenuItem onClick={() => handleViewReceipt(tx)} className="gap-2 cursor-pointer flex-row-reverse">
+                            <Receipt className="w-4 h-4" />
+                            <span>عرض الإيصال</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id, 'edit')} className="gap-2 cursor-pointer flex-row-reverse">
                             <Pencil className="w-4 h-4" />
                             <span>تعديل</span>
@@ -230,6 +322,14 @@ export function WalletDetailPage() {
           </div>
         )}
       </div>
+      {/* Receipt Dialog */}
+      <TransactionReceipt 
+        open={isReceiptOpen} 
+        onOpenChange={setIsReceiptOpen} 
+        transaction={selectedTxForReceipt}
+        wallet={wallet}
+        categoryName={selectedTxForReceipt ? getCategoryName(selectedTxForReceipt) : ''}
+      />
     </RtlWrapper>
   );
 }
