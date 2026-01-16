@@ -11,7 +11,8 @@ import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 type TimeRange = 'today' | 'week' | 'month' | 'all';
-const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
+// Blue-centric palette
+const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
 export function ReportsPage() {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
@@ -91,14 +92,14 @@ export function ReportsPage() {
           text: generateTextReport(),
           files: [file]
         });
-        toast.success('تم�� المشاركة بنجاح');
+        toast.success('تمت المشاركة بنجاح');
       } else {
         // Fallback to download
         const link = document.createElement('a');
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
         link.click();
-        toast.success('تم تحميل التقرير كصورة');
+        toast.success('تم تحميل التقرير كصو��ة');
       }
     } catch (error) {
       console.error('Image share failed:', error);
@@ -135,11 +136,11 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-slate-900">التقارير</h1>
           <p className="text-sm text-slate-500">ملخص العمليات المالية</p>
         </div>
-        <Button 
-          onClick={handleShare} 
+        <Button
+          onClick={handleShare}
           disabled={isSharing}
-          size="sm" 
-          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
         >
           {isSharing ? 'جاري المعالجة...' : (
             <>
@@ -185,9 +186,9 @@ export function ReportsPage() {
           </div>
           {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
-              <p className="text-xs text-emerald-600 mb-1">الدخل</p>
-              <p className="text-lg font-bold text-emerald-700 tabular-nums">{summary.income.toLocaleString()}</p>
+            <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+              <p className="text-xs text-blue-600 mb-1">الدخل</p>
+              <p className="text-lg font-bold text-blue-700 tabular-nums">{summary.income.toLocaleString()}</p>
             </div>
             <div className="bg-red-50 p-3 rounded-2xl border border-red-100">
               <p className="text-xs text-red-600 mb-1">المصروفات</p>
@@ -223,8 +224,8 @@ export function ReportsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      formatter={(value: number) => [`${value.toLocaleString()} ر.س`, 'المبلغ']}
+                    <Tooltip
+                      formatter={(value: number) => [`${value.toLocaleString()} ر.س`, 'الم��لغ']}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" />
@@ -247,7 +248,7 @@ export function ReportsPage() {
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className={cn(
                         "w-2 h-10 rounded-full shrink-0",
-                        tx.type === 'expense' ? "bg-red-500" : "bg-emerald-500"
+                        tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
                       )} />
                       <div className="min-w-0">
                         <p className="font-bold text-slate-900 text-sm truncate">{getCategoryName(tx.categoryId)}</p>
@@ -259,7 +260,7 @@ export function ReportsPage() {
                     <div className="text-left shrink-0">
                       <p className={cn(
                         "font-bold text-sm tabular-nums",
-                        tx.type === 'expense' ? "text-red-600" : "text-emerald-600"
+                        tx.type === 'expense' ? "text-red-600" : "text-blue-600"
                       )}>
                         {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
                       </p>
@@ -271,7 +272,7 @@ export function ReportsPage() {
           </div>
           {/* Footer for Report */}
           <div className="mt-8 pt-4 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بوا��طة تطبيق مُحافظ</p>
+            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق مُحافظ</p>
           </div>
         </div>
       </div>

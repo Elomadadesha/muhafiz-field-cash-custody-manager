@@ -7,19 +7,19 @@ interface WalletCardProps {
 }
 export function WalletCard({ wallet, onClick }: WalletCardProps) {
   return (
-    <div 
+    <div
       onClick={onClick}
       className={cn(
         "group relative overflow-hidden rounded-2xl p-5 transition-all duration-300 border cursor-pointer active:scale-98",
-        wallet.isActive 
-          ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md" 
+        wallet.isActive
+          ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md"
           : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 opacity-70"
       )}
     >
       <div className="flex justify-between items-start mb-4">
         <div className={cn(
           "p-3 rounded-xl transition-colors",
-          wallet.isActive ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" : "bg-slate-100 text-slate-400"
+          wallet.isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-slate-100 text-slate-400"
         )}>
           <WalletIcon className="w-6 h-6" />
         </div>
@@ -41,7 +41,7 @@ export function WalletCard({ wallet, onClick }: WalletCardProps) {
       </div>
       {/* Decorative gradient blob */}
       {wallet.isActive && (
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors" />
       )}
     </div>
   );

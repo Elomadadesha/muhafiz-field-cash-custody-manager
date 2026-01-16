@@ -22,7 +22,7 @@ export function BottomNav() {
         <div className="relative -top-6">
           <button 
             onClick={() => openTransactionDrawer()}
-            className="bg-primary hover:bg-emerald-600 text-white rounded-full p-4 shadow-lg shadow-emerald-500/30 transition-transform active:scale-95"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg shadow-blue-500/30 transition-transform active:scale-95"
           >
             <PlusCircle className="w-8 h-8" />
           </button>

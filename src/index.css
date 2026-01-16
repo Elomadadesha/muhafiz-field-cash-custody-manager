@@ -4,11 +4,12 @@
 @tailwind utilities;
 @layer base {
   :root {
-    /* Core Colors - Emerald & Slate Theme */
+    /* Core Colors - Blue & Slate Theme */
     --background: 210 40% 98%; /* Slate 50 */
     --foreground: 222 47% 11%; /* Slate 900 */
-    --primary: 158 64% 52%; /* Emerald 500 */
-    --primary-foreground: 222 47% 11%; /* Slate 900 */
+    /* Primary Blue 600 */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%; /* Slate 50 */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215 16% 47%;
     --card: 0 0% 100%;
@@ -17,17 +18,19 @@
     --popover-foreground: 222 47% 11%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --accent: 158 64% 95%; /* Emerald 50 */
-    --accent-foreground: 161 94% 30%; /* Emerald 700 */
+    /* Accent Blue 50 */
+    --accent: 214.3 94.6% 92%;
+    --accent-foreground: 221.2 83.2% 53.3%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --ring: 158 64% 52%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.75rem;
   }
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
-    --primary: 158 64% 52%;
+    /* Primary Blue 500 for Dark Mode */
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222 47% 11%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
@@ -41,7 +44,7 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --ring: 158 64% 52%;
+    --ring: 217.2 91.2% 59.8%;
   }
   * {
     @apply border-border;

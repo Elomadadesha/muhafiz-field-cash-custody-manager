@@ -59,7 +59,7 @@ export function TransactionDrawer() {
   }, [isOpen, selectedWalletId, wallets, walletId]);
   const handleSubmit = async () => {
     if (!walletId) {
-      toast.error('الرجاء اختيار المحفظة');
+      toast.error('الر��اء اختيار المحفظة');
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -67,7 +67,7 @@ export function TransactionDrawer() {
       return;
     }
     if (type === 'expense' && !categoryId) {
-      toast.error('الرجاء اختيار بند الصرف');
+      toast.error('الرجاء اختيار بن�� الصرف');
       return;
     }
     try {
@@ -79,10 +79,10 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       });
-      toast.success(type === 'expense' ? 'تم ��سجيل المصروف' : 'تم إضافة الرصيد');
+      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الر��يد');
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثناء حفظ الع��لية');
+      toast.error('حدث خطأ أثناء ��فظ العملية');
     }
   };
   return (
@@ -90,7 +90,7 @@ export function TransactionDrawer() {
       <DrawerContent className="max-h-[90vh]" dir="rtl">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader>
-            <DrawerTitle className="text-center text-xl font-bold">تسجيل عملية جديدة</DrawerTitle>
+            <DrawerTitle className="text-center text-xl font-bold">تسجيل عملية جديد��</DrawerTitle>
           </DrawerHeader>
           <div className="p-4 space-y-6 overflow-y-auto max-h-[70vh]">
             {/* Type Toggle */}
@@ -99,8 +99,8 @@ export function TransactionDrawer() {
                 onClick={() => setType('expense')}
                 className={cn(
                   "py-2.5 text-sm font-medium rounded-lg transition-all",
-                  type === 'expense' 
-                    ? "bg-white text-red-600 shadow-sm" 
+                  type === 'expense'
+                    ? "bg-white text-red-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -110,8 +110,8 @@ export function TransactionDrawer() {
                 onClick={() => setType('deposit')}
                 className={cn(
                   "py-2.5 text-sm font-medium rounded-lg transition-all",
-                  type === 'deposit' 
-                    ? "bg-white text-emerald-600 shadow-sm" 
+                  type === 'deposit'
+                    ? "bg-white text-blue-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -211,21 +211,21 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفاصيل..."
+                  placeholder="أضف تفا��يل..."
                   className="h-12 rounded-xl border-slate-200 text-right"
                 />
               </div>
             </div>
           </div>
           <DrawerFooter className="pt-2 pb-8 px-4">
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               disabled={isLoading}
               className={cn(
                 "w-full h-14 text-lg font-bold rounded-xl shadow-lg transition-all active:scale-95",
-                type === 'expense' 
-                  ? "bg-red-600 hover:bg-red-700 shadow-red-600/20" 
-                  : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                type === 'expense'
+                  ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
+                  : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
               )}
             >
               {isLoading ? 'جاري الحفظ...' : (type === 'expense' ? 'تسجيل المصروف' : 'إضافة الرصيد')}

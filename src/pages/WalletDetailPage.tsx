@@ -17,15 +17,15 @@ export function WalletDetailPage() {
     return (
       <RtlWrapper className="justify-center items-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900">المحفظة غير مو��ودة</h2>
+          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجودة</h2>
           <Button onClick={() => navigate('/dashboard')} className="mt-4">عودة للرئيسية</Button>
         </div>
       </RtlWrapper>
     );
   }
   const getCategoryName = (catId: string) => {
-    if (catId === 'deposit_sys') return 'تغذية رصيد';
-    return categories.find(c => c.id === catId)?.name || 'غير م��دد';
+    if (catId === 'deposit_sys') return 'تغ��ية رصيد';
+    return categories.find(c => c.id === catId)?.name || 'غير محد��';
   };
   return (
     <RtlWrapper>
@@ -36,12 +36,12 @@ export function WalletDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-900">{wallet.name}</h1>
-          <p className="text-xs text-slate-500">تفاصيل العمليات</p>
+          <p className="text-xs text-slate-500">تفاصيل العمليا��</p>
         </div>
         <Button 
           size="sm" 
           onClick={() => openTransactionDrawer(wallet.id)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-4"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
         >
           <Plus className="w-4 h-4 ml-1" />
           عملية
@@ -51,10 +51,10 @@ export function WalletDetailPage() {
       <div className="px-6 mb-6">
         <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-900/10 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-slate-400 text-sm font-medium mb-1">الرصيد الحال��</p>
+            <p className="text-slate-400 text-sm font-medium mb-1">الرصيد الحالي</p>
             <div className="flex items-baseline gap-2">
               <h2 className="text-4xl font-bold tabular-nums">{wallet.balance.toLocaleString()}</h2>
-              <span className="text-emerald-400 font-medium">ر.س</span>
+              <span className="text-blue-300 font-medium">ر.س</span>
             </div>
           </div>
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 -z-0"></div>
@@ -65,7 +65,7 @@ export function WalletDetailPage() {
         <h3 className="text-lg font-bold text-slate-900 mb-6">سجل العمليات</h3>
         {transactions.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl">
-            <p className="text-slate-400 text-sm">لا توجد ��مليات مسجلة لهذه المحفظة</p>
+            <p className="text-slate-400 text-sm">لا توجد عمليات مسجلة لهذه المحفظة</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -75,7 +75,7 @@ export function WalletDetailPage() {
                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
                   tx.type === 'expense' 
                     ? "bg-red-50 text-red-500 group-hover:bg-red-100" 
-                    : "bg-emerald-50 text-emerald-500 group-hover:bg-emerald-100"
+                    : "bg-blue-50 text-blue-500 group-hover:bg-blue-100"
                 )}>
                   {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
                 </div>
@@ -84,7 +84,7 @@ export function WalletDetailPage() {
                     <h4 className="font-bold text-slate-900 truncate">{getCategoryName(tx.categoryId)}</h4>
                     <span className={cn(
                       "font-bold tabular-nums whitespace-nowrap",
-                      tx.type === 'expense' ? "text-red-600" : "text-emerald-600"
+                      tx.type === 'expense' ? "text-red-600" : "text-blue-600"
                     )}>
                       {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
                     </span>

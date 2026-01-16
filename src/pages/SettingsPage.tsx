@@ -49,10 +49,10 @@ export function SettingsPage() {
     }
   };
   const handleDeleteCategory = async (id: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا البند؟')) {
+    if (confirm('هل أنت متأكد من حذف هذا ��لبند؟')) {
       try {
         await deleteCategory(id);
-        toast.success('تم ��ذف البند');
+        toast.success('تم حذف البند');
       } catch (error) {
         toast.error('لا يمكن حذف هذا البند');
       }
@@ -66,7 +66,7 @@ export function SettingsPage() {
   };
   const handleBackup = async () => {
     if (!backupPassword) {
-      toast.error('الرجاء إدخال كلمة مرور ل��تشفير');
+      toast.error('الرجاء إدخال ك��مة مرور للتشفير');
       return;
     }
     setIsLoading(true);
@@ -88,12 +88,12 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الا��تياطية بنجاح');
+      toast.success('تم تصدير النسخة الاحتياطية بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
       console.error(error);
-      toast.error('فشل إنشاء ��لنسخة الاحتياطية');
+      toast.error('فشل إنشاء النسخة الاحتياطية');
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +105,7 @@ export function SettingsPage() {
       const text = await restoreFile.text();
       const data = await decryptData(text, backupPassword);
       await restoreData(data);
-      toast.success('تم استعادة البيان��ت بنجاح');
+      toast.success('تم استعادة البيانات بنجاح');
       setIsRestoreOpen(false);
       setBackupPassword('');
       setRestoreFile(null);
@@ -120,13 +120,13 @@ export function SettingsPage() {
     <RtlWrapper>
       <header className="px-6 pt-8 pb-4">
         <h1 className="text-xl font-bold text-slate-900">الإعدادات</h1>
-        <p className="text-sm text-slate-500">تخصيص التطبيق والأمان</p>
+        <p className="text-sm text-slate-500">تخصيص التطبيق وال��مان</p>
       </header>
       <div className="flex-1 overflow-y-auto px-6 pb-24 space-y-8">
         {/* Security Section */}
         <section>
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-4">
-            <Shield className="w-5 h-5 text-emerald-600" />
+            <Shield className="w-5 h-5 text-blue-600" />
             <h2>الأمان والنسخ الاحتياطي</h2>
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-4 space-y-4">
@@ -146,8 +146,8 @@ export function SettingsPage() {
                 <SelectContent dir="rtl">
                   <SelectItem value="0">معطل</SelectItem>
                   <SelectItem value="1">دقيقة واحدة</SelectItem>
-                  <SelectItem value="2">دقيق��ين</SelectItem>
-                  <SelectItem value="5">5 دقائق</SelectItem>
+                  <SelectItem value="2">دقيقتين</SelectItem>
+                  <SelectItem value="5">5 دقائ��</SelectItem>
                   <SelectItem value="10">10 دقائق</SelectItem>
                 </SelectContent>
               </Select>
@@ -165,16 +165,16 @@ export function SettingsPage() {
                 </DialogTrigger>
                 <DialogContent dir="rtl">
                   <DialogHeader>
-                    <DialogTitle className="text-right">ت��دير نسخة احتياطية</DialogTitle>
+                    <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-slate-500">
-                      سيتم تشفير بياناتك بكلمة مرور. يجب عليك ت��كر هذه الكلمة لاستعادة البيانات لاحقاً.
+                      سيتم تشفير بياناتك بكلمة مرور. يجب عليك تذ��ر هذه الكلمة لاستعادة البيانات لاحقاً.
                     </p>
                     <div className="space-y-2">
-                      <Label className="text-right block">��لمة مرور التشفير</Label>
-                      <Input 
-                        type="password" 
+                      <Label className="text-right block">كلمة مرور التشفير</Label>
+                      <Input
+                        type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
                         placeholder="أدخل كلمة مرور قوية"
@@ -183,8 +183,8 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-emerald-600">
-                      {isLoading ? 'جاري الت��دير...' : 'تصدير وحفظ'}
+                    <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600">
+                      {isLoading ? 'جار�� التصدير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -207,8 +207,8 @@ export function SettingsPage() {
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
-                      <Input 
-                        type="file" 
+                      <Input
+                        type="file"
                         accept=".json"
                         onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
                         className="text-right"
@@ -216,8 +216,8 @@ export function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-right block">كلمة مرور فك التشفير</Label>
-                      <Input 
-                        type="password" 
+                      <Input
+                        type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
                         placeholder="أدخل كلمة المرور"
@@ -226,7 +226,7 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleRestore} disabled={isLoading || !backupPassword || !restoreFile} className="w-full bg-emerald-600">
+                    <Button onClick={handleRestore} disabled={isLoading || !backupPassword || !restoreFile} className="w-full bg-blue-600">
                       {isLoading ? 'جاري الاستعادة...' : 'استعادة البيانات'}
                     </Button>
                   </DialogFooter>
@@ -239,19 +239,19 @@ export function SettingsPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 text-slate-900 font-bold">
-              <Tag className="w-5 h-5 text-emerald-600" />
+              <Tag className="w-5 h-5 text-blue-600" />
               <h2>بنود الصرف</h2>
             </div>
             <Dialog open={isAddCatOpen} onOpenChange={setIsAddCatOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 text-xs">
                   <Plus className="w-3 h-3 ml-1" />
-                  إضافة
+                  ��ضافة
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
                 <DialogHeader>
-                  <DialogTitle className="text-right">إضافة بند صرف جدي��</DialogTitle>
+                  <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
                   <Label className="text-right block mb-2">اسم البند</Label>
@@ -263,7 +263,7 @@ export function SettingsPage() {
                   />
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleAddCategory} disabled={isLoading} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  <Button onClick={handleAddCategory} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
                     {isLoading ? 'جاري الحفظ...' : 'حفظ'}
                   </Button>
                 </DialogFooter>
@@ -272,15 +272,15 @@ export function SettingsPage() {
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
-              <div
-                key={cat.id}
+              <div 
+                key={cat.id} 
                 className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50' : ''}`}
               >
                 <span className="text-sm font-medium text-slate-700">{cat.name}</span>
                 {cat.isSystem ? (
                   <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-full">نظام</span>
                 ) : (
-                  <button
+                  <button 
                     onClick={() => handleDeleteCategory(cat.id)}
                     className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors"
                   >
@@ -294,7 +294,7 @@ export function SettingsPage() {
         {/* Wallets Section */}
         <section>
           <div className="flex items-center gap-2 text-slate-900 font-bold mb-4">
-            <Wallet className="w-5 h-5 text-emerald-600" />
+            <Wallet className="w-5 h-5 text-blue-600" />
             <h2>إدارة العُهد</h2>
           </div>
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
@@ -302,15 +302,15 @@ export function SettingsPage() {
               <div className="p-4 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
-                <div
-                  key={wallet.id}
+                <div 
+                  key={wallet.id} 
                   className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50' : ''}`}
                 >
                   <div>
                     <p className="text-sm font-medium text-slate-700">{wallet.name}</p>
-                    <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} ر.��</p>
+                    <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} ر.س</p>
                   </div>
-                  <Switch
+                  <Switch 
                     checked={wallet.isActive}
                     onCheckedChange={() => toggleWalletStatus(wallet.id)}
                   />
@@ -332,13 +332,13 @@ export function SettingsPage() {
               جميع البيانات محفوظة على جهازك فقط.
             </p>
           </div>
-          <Button
-            variant="destructive"
+          <Button 
+            variant="destructive" 
             className="w-full gap-2"
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسجيل ال��روج
+            تسجيل الخروج
           </Button>
         </section>
       </div>

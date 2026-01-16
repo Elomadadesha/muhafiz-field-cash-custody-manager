@@ -36,41 +36,41 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بنجا��');
+    toast.success('تم إضافة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
       {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">مرحباً، الموظف</h1>
+          <h1 className="text-xl font-bold text-slate-900">مرحباً، أسمى مصطفى</h1>
           <p className="text-sm text-slate-500">
             {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
           </p>
         </div>
-        <button className="p-2 rounded-full bg-white border border-slate-100 shadow-sm text-slate-600 hover:text-emerald-600 transition-colors relative">
+        <button className="p-2 rounded-full bg-white border border-slate-100 shadow-sm text-slate-600 hover:text-blue-600 transition-colors relative">
           <Bell className="w-5 h-5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
       </header>
       {/* Main Content */}
       <main className="flex-1 px-6 pb-24 overflow-y-auto space-y-8">
-        {/* Total Balance Card - Visually Enhanced */}
+        {/* Total Balance Card - Visually Enhanced (Blue Theme) */}
         <div className="relative overflow-hidden rounded-[2rem] bg-slate-900 p-6 text-white shadow-xl shadow-slate-900/20 group">
           {/* Decorative Gradients */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-emerald-500/30 transition-colors duration-500"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none group-hover:bg-blue-500/30 transition-colors duration-500"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-blue-500/30 transition-colors duration-500"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-500"></div>
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
           <div className="relative z-10">
             <p className="text-slate-400 text-sm font-medium mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              إجمالي الرصيد الحالي
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              إ��مالي الرصيد الحالي
             </p>
             <div className="flex items-baseline gap-2 mb-6">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums">
                 {totalBalance.toLocaleString('en-US')}
               </h2>
-              <span className="text-emerald-400 font-medium text-lg">ر.س</span>
+              <span className="text-blue-300 font-medium text-lg">ر.س</span>
             </div>
             <div className="flex gap-3">
               <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 hover:bg-white/15 transition-colors">
@@ -78,16 +78,16 @@ export function DashboardPage() {
                   <div className="p-1 rounded-full bg-red-500/20 text-red-300">
                     <ArrowUpRight className="w-3 h-3" />
                   </div>
-                  <p className="text-xs text-slate-300">مصروفات اليو��</p>
+                  <p className="text-xs text-slate-300">مصروفات اليوم</p>
                 </div>
                 <p className="text-lg font-semibold tabular-nums">{todayExpenses.toLocaleString('en-US')}</p>
               </div>
               <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10 hover:bg-white/15 transition-colors">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-300">
+                  <div className="p-1 rounded-full bg-blue-500/20 text-blue-300">
                     <ArrowDownLeft className="w-3 h-3" />
                   </div>
-                  <p className="text-xs text-slate-300">العُهد النشطة</p>
+                  <p className="text-xs text-slate-300">العُهد النشط��</p>
                 </div>
                 <p className="text-lg font-semibold tabular-nums">{wallets.filter(w => w.isActive).length}</p>
               </div>
@@ -98,9 +98,9 @@ export function DashboardPage() {
         <div>
           <h3 className="text-sm font-bold text-slate-900 mb-3 px-1">إجراءات سريعة</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button 
+            <button
               onClick={() => openTransactionDrawer()}
-              className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all active:scale-98 group"
+              className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all active:scale-98 group"
             >
               <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-100 transition-colors">
                 <ArrowUpRight className="w-5 h-5" />
@@ -110,11 +110,11 @@ export function DashboardPage() {
                 <span className="text-xs text-slate-500">خصم من عُهدة</span>
               </div>
             </button>
-            <button 
+            <button
               onClick={() => openTransactionDrawer()}
-              className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all active:scale-98 group"
+              className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all active:scale-98 group"
             >
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                 <ArrowDownLeft className="w-5 h-5" />
               </div>
               <div className="text-right">
@@ -130,9 +130,9 @@ export function DashboardPage() {
             <h3 className="text-lg font-bold text-slate-900">محافظ العُهد</h3>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1 rounded-full px-3">
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1 rounded-full px-3">
                   <Plus className="w-4 h-4" />
-                  <span>جديدة</span>
+                  <span>��ديدة</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
@@ -161,7 +161,7 @@ export function DashboardPage() {
                   </div>
                 </div>
                 <DialogFooter className="sm:justify-start">
-                  <Button onClick={handleAddWallet} className="bg-emerald-600 hover:bg-emerald-700 text-white w-full">
+                  <Button onClick={handleAddWallet} className="bg-blue-600 hover:bg-blue-700 text-white w-full">
                     حفظ العُهدة
                   </Button>
                 </DialogFooter>
@@ -189,7 +189,7 @@ export function DashboardPage() {
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-slate-900 font-medium mb-1">لا توجد عُهد ��الياً</h3>
+              <h3 className="text-slate-900 font-medium mb-1">لا توجد عُهد حالياً</h3>
               <p className="text-slate-500 text-sm">قم بإضافة عُهدة جديدة للبدء</p>
             </div>
           )}
