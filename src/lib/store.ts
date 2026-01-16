@@ -28,6 +28,7 @@ interface AppState {
   unlockApp: (password: string) => Promise<boolean>;
   // Data Actions
   addWallet: (name: string, initialBalance: number) => Promise<void>;
+  renameWallet: (id: string, newName: string) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
   // Transaction Actions
   openTransactionDrawer: (walletId?: string) => void;
@@ -35,6 +36,7 @@ interface AppState {
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   // Category Actions
   addCategory: (name: string) => Promise<string | undefined>; // Returns the new ID
+  updateCategory: (id: string, newName: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   // Settings Actions
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
@@ -76,7 +78,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تح��يل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
@@ -146,6 +148,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isLoading: false, error: 'فشل إضافة المحفظة' });
     }
   },
+  renameWallet: async (id: string, newName: string) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const updatedWallets = state.wallets.map(w => 
+        w.id === id ? { ...w, name: newName } : w
+      );
+      set({ wallets: updatedWallets });
+      await db.saveData({
+        wallets: updatedWallets,
+        transactions: state.transactions,
+        categories: state.categories,
+        lastUpdated: Date.now()
+      });
+      set({ isLoading: false });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تعديل اسم المحفظة' });
+    }
+  },
   toggleWalletStatus: async (id: string) => {
     const state = get();
     const updatedWallets = state.wallets.map(w =>
@@ -177,16 +198,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Update wallet balance
       const updatedWallets = state.wallets.map(w => {
         if (w.id === data.walletId) {
-          const newBalance = data.type === 'expense'
-            ? w.balance - data.amount
+          const newBalance = data.type === 'expense' 
+            ? w.balance - data.amount 
             : w.balance + data.amount;
           return { ...w, balance: newBalance };
         }
         return w;
       });
       const newTransactions = [newTx, ...state.transactions];
-      set({
-        wallets: updatedWallets,
+      set({ 
+        wallets: updatedWallets, 
         transactions: newTransactions,
         isLoading: false,
         isTransactionDrawerOpen: false,
@@ -224,6 +245,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       set({ isLoading: false, error: 'فشل إضافة البند' });
       return undefined;
+    }
+  },
+  updateCategory: async (id: string, newName: string) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const updatedCategories = state.categories.map(c => 
+        c.id === id ? { ...c, name: newName } : c
+      );
+      set({ categories: updatedCategories, isLoading: false });
+      await db.saveData({
+        wallets: state.wallets,
+        transactions: state.transactions,
+        categories: updatedCategories,
+        lastUpdated: Date.now()
+      });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تعديل البند' });
     }
   },
   deleteCategory: async (id: string) => {

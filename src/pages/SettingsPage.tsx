@@ -10,30 +10,43 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2 } from 'lucide-react';
+import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { Wallet as WalletType, Category } from '@/types/app';
 export function SettingsPage() {
   const categories = useAppStore(s => s.categories);
   const wallets = useAppStore(s => s.wallets);
   const transactions = useAppStore(s => s.transactions);
   const settings = useAppStore(s => s.settings);
   const addCategory = useAppStore(s => s.addCategory);
+  const updateCategory = useAppStore(s => s.updateCategory);
   const deleteCategory = useAppStore(s => s.deleteCategory);
+  const addWallet = useAppStore(s => s.addWallet); // Needed if we want to add wallets here too, though dashboard has it
+  const renameWallet = useAppStore(s => s.renameWallet);
   const toggleWalletStatus = useAppStore(s => s.toggleWalletStatus);
   const updateSettings = useAppStore(s => s.updateSettings);
   const restoreData = useAppStore(s => s.restoreData);
   const logout = useAppStore(s => s.logout);
   const navigate = useNavigate();
+  // Category State
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddCatOpen, setIsAddCatOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [isEditCatOpen, setIsEditCatOpen] = useState(false);
+  // Wallet State
+  const [editingWallet, setEditingWallet] = useState<WalletType | null>(null);
+  const [editWalletName, setEditWalletName] = useState('');
+  const [isEditWalletOpen, setIsEditWalletOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   // Backup/Restore State
   const [backupPassword, setBackupPassword] = useState('');
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  // --- Category Handlers ---
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     setIsLoading(true);
@@ -48,16 +61,58 @@ export function SettingsPage() {
       setIsLoading(false);
     }
   };
+  const openEditCategory = (cat: Category) => {
+    setEditingCategory(cat);
+    setEditCategoryName(cat.name);
+    setIsEditCatOpen(true);
+  };
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !editCategoryName.trim()) return;
+    setIsLoading(true);
+    try {
+      await updateCategory(editingCategory.id, editCategoryName.trim());
+      setIsEditCatOpen(false);
+      setEditingCategory(null);
+      setEditCategoryName('');
+      toast.success('تم تعديل البند بنجاح');
+    } catch (error) {
+      toast.error('فشل تعديل البند');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleDeleteCategory = async (id: string) => {
     if (confirm('هل أنت متأكد من حذف هذا البند؟')) {
       try {
         await deleteCategory(id);
         toast.success('تم حذف البند');
       } catch (error) {
-        toast.error('لا يمك�� حذف هذا البند');
+        toast.error('لا يمكن حذف هذا البند');
       }
     }
   };
+  // --- Wallet Handlers ---
+  const openEditWallet = (wallet: WalletType) => {
+    setEditingWallet(wallet);
+    setEditWalletName(wallet.name);
+    setIsEditWalletOpen(true);
+  };
+  const handleRenameWallet = async () => {
+    if (!editingWallet || !editWalletName.trim()) return;
+    setIsLoading(true);
+    try {
+      await renameWallet(editingWallet.id, editWalletName.trim());
+      setIsEditWalletOpen(false);
+      setEditingWallet(null);
+      setEditWalletName('');
+      toast.success('تم تعديل اسم المحفظة بنجاح');
+    } catch (error) {
+      toast.error('فشل تعديل المحفظة');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // --- Auth/System Handlers ---
   const handleLogout = () => {
     if (confirm('هل تريد تسجيل الخروج؟')) {
       logout();
@@ -66,7 +121,7 @@ export function SettingsPage() {
   };
   const handleBackup = async () => {
     if (!backupPassword) {
-      toast.error('الرجاء إدخال كلمة مرور للتشفير');
+      toast.error('الرجاء إدخال كلم�� مرور للتشفير');
       return;
     }
     setIsLoading(true);
@@ -88,12 +143,12 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم ��صدير النسخة الاحتياطية بنجاح');
+      toast.success('تم تصدير النسخة الاحتياطية بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
       console.error(error);
-      toast.error('فشل إن��اء النسخة الاحتياطية');
+      toast.error('فشل إنشاء النسخة الاحتياطية');
     } finally {
       setIsLoading(false);
     }
@@ -217,8 +272,8 @@ export function SettingsPage() {
                       سيتم تشفير بياناتك بكلمة مرور. يجب عليك تذكر هذه الكلمة لاستعادة البيانات لاحقاً.
                     </p>
                     <div className="space-y-2">
-                      <Label className="text-right block">كلمة مرور الت��فير</Label>
-                      <Input
+                      <Label className="text-right block">كلمة مرور التشفير</Label>
+                      <Input 
                         type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
@@ -229,7 +284,7 @@ export function SettingsPage() {
                   </div>
                   <DialogFooter>
                     <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
-                      {isLoading ? 'جاري التصدير...' : 'تصدير وحفظ'}
+                      {isLoading ? 'جاري الت��دير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -255,7 +310,7 @@ export function SettingsPage() {
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
-                      <Input
+                      <Input 
                         type="file"
                         accept=".json"
                         onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
@@ -264,7 +319,7 @@ export function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-right block">كلمة مرور فك التشفير</Label>
-                      <Input
+                      <Input 
                         type="password"
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
@@ -301,7 +356,7 @@ export function SettingsPage() {
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم البند الجديد لإضافته إلى قائمة المصروفات.
+                    أدخل اسم البند الجديد ل��ضافته إلى قائمة المصروفات.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -333,19 +388,57 @@ export function SettingsPage() {
                   </div>
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
                 </div>
-                {cat.isSystem ? (
-                  <span className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-400 px-2 py-1 rounded-full">نظام</span>
-                ) : (
-                  <button 
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                <div className="flex items-center gap-1">
+                  {/* Edit Button for All Categories */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    onClick={() => openEditCategory(cat)}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  {cat.isSystem ? (
+                    <span className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-400 px-2 py-1 rounded-full ml-1">نظام</span>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+          {/* Edit Category Dialog */}
+          <Dialog open={isEditCatOpen} onOpenChange={setIsEditCatOpen}>
+            <DialogContent className="sm:max-w-md" dir="rtl">
+              <DialogHeader>
+                <DialogTitle className="text-right">تعديل اسم البند</DialogTitle>
+                <DialogDescription className="text-right text-slate-500">
+                  قم بتغيير اسم بند الصرف. سيتم تحديث الاسم في جميع التقارير.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Label className="text-right block mb-2">اسم البند</Label>
+                <Input
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                  placeholder="اسم البند الجديد"
+                  className="text-right h-12 rounded-xl"
+                />
+              </div>
+              <DialogFooter>
+                <Button onClick={handleUpdateCategory} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl">
+                  {isLoading ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </section>
         {/* Wallets Section */}
         <section>
@@ -371,14 +464,49 @@ export function SettingsPage() {
                       <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} {CURRENCIES[settings.currency].symbol}</p>
                     </div>
                   </div>
-                  <Switch 
-                    checked={wallet.isActive} 
-                    onCheckedChange={() => toggleWalletStatus(wallet.id)} 
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      onClick={() => openEditWallet(wallet)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Switch 
+                      checked={wallet.isActive}
+                      onCheckedChange={() => toggleWalletStatus(wallet.id)}
+                    />
+                  </div>
                 </div>
               ))
             )}
           </div>
+          {/* Edit Wallet Dialog */}
+          <Dialog open={isEditWalletOpen} onOpenChange={setIsEditWalletOpen}>
+            <DialogContent className="sm:max-w-md" dir="rtl">
+              <DialogHeader>
+                <DialogTitle className="text-right">تعديل اسم المحفظة</DialogTitle>
+                <DialogDescription className="text-right text-slate-500">
+                  قم بتغيير اسم العُهدة. لن يتأ��ر الرصيد أو العمليات السابقة.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Label className="text-right block mb-2">اسم المحفظة</Label>
+                <Input
+                  value={editWalletName}
+                  onChange={(e) => setEditWalletName(e.target.value)}
+                  placeholder="اسم المحفظة الجديد"
+                  className="text-right h-12 rounded-xl"
+                />
+              </div>
+              <DialogFooter>
+                <Button onClick={handleRenameWallet} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl">
+                  {isLoading ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </section>
         {/* App Info & Logout */}
         <section className="pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -399,7 +527,7 @@ export function SettingsPage() {
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسجيل الخروج
+            تسج��ل الخروج
           </Button>
         </section>
       </div>

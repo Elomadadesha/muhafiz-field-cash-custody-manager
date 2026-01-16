@@ -8,6 +8,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { useAppStore } from '@/lib/store';
 import { Toaster, toast } from 'sonner';
 import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useAutoLock } from '@/hooks/use-auto-lock';
 import { isSecureContextAvailable } from '@/lib/security';
 // Auth Guard
@@ -83,7 +84,7 @@ export function App() {
     // Check for security context on mount
     if (!isSecureContextAvailable()) {
       toast.warning(
-        "ميزات ال��مان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).",
+        "ميزات الأ��ان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).",
         { duration: 10000 }
       );
     }
@@ -91,6 +92,7 @@ export function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <InstallPrompt />
       <Toaster richColors position="top-center" />
     </>
   );
