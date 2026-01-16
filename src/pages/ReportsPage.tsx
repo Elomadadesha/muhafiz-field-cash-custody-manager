@@ -12,9 +12,12 @@ import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/app';
+
 type TimeRange = 'today' | 'week' | 'month' | 'all';
+
 // Blue-centric palette
 const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
+
 export function ReportsPage() {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
@@ -24,6 +27,7 @@ export function ReportsPage() {
   const [range, setRange] = useState<TimeRange>('today');
   const reportRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
+
   // Filter transactions based on range
   const filteredTransactions = useMemo(() => {
     const now = new Date();
@@ -35,6 +39,7 @@ export function ReportsPage() {
       return true;
     }).sort((a, b) => b.date - a.date);
   }, [transactions, range]);
+
   // Calculate summaries
   const summary = useMemo(() => {
     const income = filteredTransactions
@@ -45,6 +50,7 @@ export function ReportsPage() {
       .reduce((acc, t) => acc + t.amount, 0);
     return { income, expense, net: income - expense };
   }, [filteredTransactions]);
+
   // Prepare chart data
   const chartData = useMemo(() => {
     const categoryMap = new Map<string, number>();
@@ -59,6 +65,7 @@ export function ReportsPage() {
         const current = categoryMap.get(key) || 0;
         categoryMap.set(key, current + t.amount);
       });
+
     return Array.from(categoryMap.entries())
       .map(([id, value]) => {
         let name = 'غير محدد';
@@ -71,6 +78,7 @@ export function ReportsPage() {
       })
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
+
   const generateTextReport = () => {
     const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
     let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
@@ -83,6 +91,7 @@ export function ReportsPage() {
     });
     return text;
   };
+
   const handleShare = async () => {
     if (!reportRef.current) return;
     setIsSharing(true);
@@ -97,16 +106,18 @@ export function ReportsPage() {
           fontFamily: "'Cairo', sans-serif"
         }
       });
+
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], `report-${format(new Date(), 'yyyy-MM-dd')}.png`, { type: 'image/png' });
+
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'تقرير المصروفات',
           text: generateTextReport(),
           files: [file]
         });
-        toast.success('تمت الم��اركة بنجاح');
+        toast.success('تمت المشاركة بنجاح');
       } else {
         // Fallback to download
         const link = document.createElement('a');
@@ -127,7 +138,7 @@ export function ReportsPage() {
           });
         } else {
           await navigator.clipboard.writeText(text);
-          toast.success('تم نسخ التقرير النصي لل��افظة');
+          toast.success('تم نسخ التقرير النصي للحافظة');
         }
       } catch (textError) {
         toast.error('فشل مشاركة التقرير');
@@ -136,14 +147,17 @@ export function ReportsPage() {
       setIsSharing(false);
     }
   };
+
   const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return 'تغ��ية رصيد';
+    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
+
   const getWalletName = (id: string) => {
     return wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
   };
+
   return (
     <RtlWrapper>
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
@@ -165,6 +179,7 @@ export function ReportsPage() {
           )}
         </Button>
       </header>
+
       {/* Filters */}
       <div className="px-6 mb-4">
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
@@ -189,6 +204,7 @@ export function ReportsPage() {
           ))}
         </div>
       </div>
+
       {/* Report Content Area (Capturable) */}
       <div className="flex-1 overflow-y-auto px-6 pb-24" ref={reportRef}>
         <div className="bg-white dark:bg-slate-900 pb-8"> {/* Wrapper for clean capture background */}
@@ -199,6 +215,7 @@ export function ReportsPage() {
               {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
             </p>
           </div>
+
           {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-3 mb-8">
             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-100 dark:border-blue-800">
@@ -219,12 +236,13 @@ export function ReportsPage() {
               </p>
             </div>
           </div>
+
           {/* Chart */}
           {chartData.length > 0 && (
             <div className="mb-8 h-64 w-full">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">توزيع المصروفات</h3>
               <div className="h-56 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <PieChart>
                     <Pie
                       data={chartData}
@@ -249,6 +267,7 @@ export function ReportsPage() {
               </div>
             </div>
           )}
+
           {/* Transactions Table */}
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
@@ -285,9 +304,10 @@ export function ReportsPage() {
               </div>
             )}
           </div>
+
           {/* Footer for Report */}
           <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطب��ق Abu MaWaDa</p>
+            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
           </div>
         </div>
       </div>
@@ -295,3 +315,4 @@ export function ReportsPage() {
     </RtlWrapper>
   );
 }
+//
