@@ -40,14 +40,14 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بنجاح');
+    toast.success('تم إضافة المحفظة بن��اح');
   };
   return (
     <RtlWrapper>
       {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-20">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">مرحباً، أسمى مصطفى</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">مرحبا مصطفى</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
           </p>
@@ -58,7 +58,7 @@ export function DashboardPage() {
         </button>
       </header>
       {/* Main Content */}
-      <motion.main 
+      <motion.main
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -73,7 +73,7 @@ export function DashboardPage() {
           <div className="relative z-10">
             <p className="text-blue-100 text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]"></span>
-              إجمالي الرصيد الحالي
+              إجمال�� الرصيد الحالي
             </p>
             <div className="flex items-baseline gap-2 mb-8">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums drop-shadow-sm">
@@ -148,7 +148,7 @@ export function DashboardPage() {
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة عُهدة جديدة</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم العُهدة والرصيد الافتتاحي لإنشاء محفظة جديدة.
+                    أدخل اسم ��لعُهدة والرصيد الافتتاحي لإنشاء محفظة جديدة.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">

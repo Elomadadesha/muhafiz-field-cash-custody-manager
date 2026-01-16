@@ -51,7 +51,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   wallets: [],
   transactions: [],
   categories: [],
-  settings: { autoLockMinutes: 5, lastActive: Date.now() },
+  settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
   isTransactionDrawerOpen: false,
   selectedWalletId: null,
   init: async () => {
@@ -68,18 +68,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: data.wallets || [],
         transactions: data.transactions || [],
         categories: data.categories || [],
-        settings: settings || { autoLockMinutes: 5, lastActive: Date.now() },
+        settings: settings || { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
         isLoading: false
       });
     } catch (err) {
       console.error('Init failed:', err);
       // Fallback to safe empty state to prevent app crash
-      set({ 
-        isLoading: false, 
-        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
+      set({
+        isLoading: false,
+        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
-        categories: []
+        categories: [],
+        settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' }
       });
     }
   },
@@ -90,7 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await db.setPasswordHash(hash);
       set({ isSetup: true, isAuthenticated: true, isLocked: false, isLoading: false });
     } catch (err) {
-      set({ isLoading: false, error: 'فشل إعداد التطبيق' });
+      set({ isLoading: false, error: 'فشل إعداد الت��بيق' });
       throw err;
     }
   },
@@ -147,7 +148,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   toggleWalletStatus: async (id: string) => {
     const state = get();
-    const updatedWallets = state.wallets.map(w => 
+    const updatedWallets = state.wallets.map(w =>
       w.id === id ? { ...w, isActive: !w.isActive } : w
     );
     set({ wallets: updatedWallets });
@@ -176,16 +177,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Update wallet balance
       const updatedWallets = state.wallets.map(w => {
         if (w.id === data.walletId) {
-          const newBalance = data.type === 'expense' 
-            ? w.balance - data.amount 
+          const newBalance = data.type === 'expense'
+            ? w.balance - data.amount
             : w.balance + data.amount;
           return { ...w, balance: newBalance };
         }
         return w;
       });
       const newTransactions = [newTx, ...state.transactions];
-      set({ 
-        wallets: updatedWallets, 
+      set({
+        wallets: updatedWallets,
         transactions: newTransactions,
         isLoading: false,
         isTransactionDrawerOpen: false,

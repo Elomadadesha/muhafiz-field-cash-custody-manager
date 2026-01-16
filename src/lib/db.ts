@@ -11,7 +11,7 @@ export interface AppSettings {
   currency: 'SAR' | 'EGP' | 'USD';
 }
 export const CURRENCIES = {
-  SAR: { label: 'ريال سع��دي', symbol: 'ر.س' },
+  SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
   EGP: { label: 'جنيه مصري', symbol: 'ج.م' },
   USD: { label: 'دولار أمريكي', symbol: '$' },
 };
@@ -19,7 +19,7 @@ const INITIAL_DATA: AppData = {
   wallets: [],
   transactions: [],
   categories: [
-    { id: 'cat_1', name: 'مواصلات', isSystem: true },
+    { id: 'cat_1', name: 'مواصلا��', isSystem: true },
     { id: 'cat_2', name: 'وقود', isSystem: true },
     { id: 'cat_3', name: 'صيانة', isSystem: true },
     { id: 'cat_4', name: 'قطع غيار', isSystem: true },
@@ -31,7 +31,7 @@ const INITIAL_DATA: AppData = {
 const INITIAL_SETTINGS: AppSettings = {
   autoLockMinutes: 5,
   lastActive: Date.now(),
-  currency: 'SAR',
+  currency: 'EGP',
 };
 export const db = {
   // Data Operations
