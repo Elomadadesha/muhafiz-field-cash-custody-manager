@@ -10,11 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Check, Wallet, Banknote, Wrench, Bus, Utensils, ShoppingBag, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
-  if (name.includes('مو��صلات')) return <Bus className="w-5 h-5" />;
+  if (name.includes('مواصلات')) return <Bus className="w-5 h-5" />;
   if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
@@ -56,10 +56,10 @@ export function TransactionDrawer() {
       setDate(new Date());
       setType('expense');
     }
-  }, [isOpen, selectedWalletId, wallets]);
+  }, [isOpen, selectedWalletId, wallets, walletId]);
   const handleSubmit = async () => {
     if (!walletId) {
-      toast.error('الرجا�� اختيار المحفظة');
+      toast.error('الرجاء اختيار المحفظة');
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -79,10 +79,10 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       });
-      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
+      toast.success(type === 'expense' ? 'تم ��سجيل المصروف' : 'تم إضافة الرصيد');
       closeDrawer();
     } catch (error) {
-      toast.error('حد�� خطأ أثناء حفظ العملية');
+      toast.error('حدث خطأ أثناء حفظ الع��لية');
     }
   };
   return (

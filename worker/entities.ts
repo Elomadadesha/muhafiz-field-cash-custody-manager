@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { AppData, Wallet, Transaction } from "@shared/types";
+import type { AppData, Wallet, Transaction, Category } from "@shared/types";
 export interface UserEntityState {
   id: string;
   data: AppData;
@@ -58,9 +58,6 @@ export class UserEntity extends IndexedEntity<UserEntityState> {
       const { walletId, amount, type } = transaction;
       const walletIndex = state.data.wallets.findIndex(w => w.id === walletId);
       if (walletIndex === -1) {
-        // If wallet not found, we can't process. 
-        // In a real app, we might throw, but here we'll just return state unchanged or log.
-        // Throwing ensures the API returns an error.
         throw new Error("Wallet not found");
       }
       const wallet = state.data.wallets[walletIndex];
@@ -83,6 +80,34 @@ export class UserEntity extends IndexedEntity<UserEntityState> {
           ...state.data,
           wallets: updatedWallets,
           transactions: updatedTransactions,
+          lastUpdated: Date.now()
+        }
+      };
+    });
+    return (await this.getState()).data;
+  }
+  async addCategory(category: Category): Promise<AppData> {
+    await this.mutate(state => ({
+      ...state,
+      data: {
+        ...state.data,
+        categories: [...state.data.categories, category],
+        lastUpdated: Date.now()
+      }
+    }));
+    return (await this.getState()).data;
+  }
+  async deleteCategory(categoryId: string): Promise<AppData> {
+    await this.mutate(state => {
+      const category = state.data.categories.find(c => c.id === categoryId);
+      if (category && category.isSystem) {
+        throw new Error("Cannot delete system category");
+      }
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          categories: state.data.categories.filter(c => c.id !== categoryId),
           lastUpdated: Date.now()
         }
       };

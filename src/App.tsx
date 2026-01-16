@@ -2,6 +2,8 @@ import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-rou
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { WalletDetailPage } from '@/pages/WalletDetailPage';
+import { ReportsPage } from '@/pages/ReportsPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { useAppStore } from '@/lib/store';
 import { Toaster } from 'sonner';
 import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
@@ -51,14 +53,13 @@ const router = createBrowserRouter([
         path: '/wallet/:id',
         element: <WalletDetailPage />,
       },
-      // Placeholders for future routes
       {
         path: '/reports',
-        element: <div className="p-8 text-center">صفحة التقارير (قريباً)</div>,
+        element: <ReportsPage />,
       },
       {
         path: '/settings',
-        element: <div className="p-8 text-center">صفحة الإعدادات (قريباً)</div>,
+        element: <SettingsPage />,
       },
     ],
   },

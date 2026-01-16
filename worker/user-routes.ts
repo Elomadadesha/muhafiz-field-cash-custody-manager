@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { ok, bad } from './core-utils';
-import type { Transaction } from "@shared/types";
+import type { Transaction, Category } from "@shared/types";
 // Hardcoded ID for the single user application
 const MAIN_USER_ID = "muhafiz-main-user";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -43,6 +43,32 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       return ok(c, updatedData);
     } catch (e: any) {
       return bad(c, e.message || 'Failed to add transaction');
+    }
+  });
+  // CATEGORY: Add new category
+  app.post('/api/category', async (c) => {
+    const category = await c.req.json<Category>();
+    if (!category || !category.id || !category.name) {
+      return bad(c, 'Invalid category data');
+    }
+    const entity = new UserEntity(c.env, MAIN_USER_ID);
+    try {
+      const updatedData = await entity.addCategory(category);
+      return ok(c, updatedData);
+    } catch (e: any) {
+      return bad(c, e.message || 'Failed to add category');
+    }
+  });
+  // CATEGORY: Delete category
+  app.delete('/api/category/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!id) return bad(c, 'Missing category ID');
+    const entity = new UserEntity(c.env, MAIN_USER_ID);
+    try {
+      const updatedData = await entity.deleteCategory(id);
+      return ok(c, updatedData);
+    } catch (e: any) {
+      return bad(c, e.message || 'Failed to delete category');
     }
   });
   // Keep health check or other utilities if needed

@@ -23,6 +23,9 @@ interface AppState {
   openTransactionDrawer: (walletId?: string) => void;
   closeTransactionDrawer: () => void;
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+  // Category Actions
+  addCategory: (name: string) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
   // Helpers
   getWallet: (id: string) => Wallet | undefined;
 }
@@ -64,17 +67,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       // We use a fixed ID for the single user concept
       const data = await api<AppData>('/api/sync');
-      set({
-        wallets: data.wallets || [],
+      set({ 
+        wallets: data.wallets || [], 
         transactions: data.transactions || [],
+        // If backend has no categories (first run), use initial. Otherwise use backend's.
         categories: data.categories?.length ? data.categories : INITIAL_CATEGORIES,
-        isLoading: false
+        isLoading: false 
       });
     } catch (err) {
       console.error('Sync failed:', err);
-      set({
-        error: err instanceof Error ? err.message : 'فشل الاتصال بالخادم',
-        isLoading: false
+      set({ 
+        error: err instanceof Error ? err.message : 'فشل الاتصال بالخادم', 
+        isLoading: false 
       });
     }
   },
@@ -138,16 +142,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         createdAt: Date.now(),
         ...data
       };
-      // Optimistic update logic is complex due to balance updates.
-      // For safety, we'll rely on the server response which returns the full updated AppData.
-      // But to make UI snappy, we can try to append locally first if we want.
-      // Let's stick to server response for data integrity in this phase.
       const updatedData = await api<AppData>('/api/transaction', {
         method: 'POST',
         body: JSON.stringify(newTx)
       });
-      set({
-        wallets: updatedData.wallets,
+      set({ 
+        wallets: updatedData.wallets, 
         transactions: updatedData.transactions,
         isLoading: false,
         isTransactionDrawerOpen: false, // Close drawer on success
@@ -157,6 +157,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error('Add transaction failed:', err);
       set({ isLoading: false, error: 'فشل إضافة العملية' });
       throw err; // Re-throw to let UI handle specific error feedback if needed
+    }
+  },
+  addCategory: async (name: string) => {
+    set({ isLoading: true });
+    try {
+      const newCategory: Category = {
+        id: crypto.randomUUID(),
+        name,
+        isSystem: false
+      };
+      const updatedData = await api<AppData>('/api/category', {
+        method: 'POST',
+        body: JSON.stringify(newCategory)
+      });
+      set({ 
+        categories: updatedData.categories,
+        isLoading: false 
+      });
+    } catch (err) {
+      console.error('Add category failed:', err);
+      set({ isLoading: false, error: 'فشل إضافة البند' });
+      throw err;
+    }
+  },
+  deleteCategory: async (id: string) => {
+    set({ isLoading: true });
+    try {
+      const updatedData = await api<AppData>(`/api/category/${id}`, {
+        method: 'DELETE'
+      });
+      set({ 
+        categories: updatedData.categories,
+        isLoading: false 
+      });
+    } catch (err) {
+      console.error('Delete category failed:', err);
+      set({ isLoading: false, error: 'فشل حذف البند' });
+      throw err;
     }
   },
   getWallet: (id) => {
