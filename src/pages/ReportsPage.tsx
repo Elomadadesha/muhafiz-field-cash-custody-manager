@@ -4,20 +4,19 @@ import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
-import { Share2, Copy, Calendar as CalendarIcon, Filter } from 'lucide-react';
-import { format, isSameDay, isSameWeek, isSameMonth, startOfDay, endOfDay } from 'date-fns';
+import { Share2, FileSpreadsheet } from 'lucide-react';
+import { format, isSameDay, isSameWeek, isSameMonth } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/app';
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { generateDailyTreasuryReport } from '@/lib/excel';
 type TimeRange = 'today' | 'week' | 'month' | 'all';
-
 // Blue-centric palette
 const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
-
 export function ReportsPage() {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
@@ -27,7 +26,7 @@ export function ReportsPage() {
   const [range, setRange] = useState<TimeRange>('today');
   const reportRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
-
+  const [activeTab, setActiveTab] = useState('general');
   // Filter transactions based on range
   const filteredTransactions = useMemo(() => {
     const now = new Date();
@@ -39,8 +38,7 @@ export function ReportsPage() {
       return true;
     }).sort((a, b) => b.date - a.date);
   }, [transactions, range]);
-
-  // Calculate summaries
+  // Calculate summaries for General Report
   const summary = useMemo(() => {
     const income = filteredTransactions
       .filter(t => t.type === 'deposit')
@@ -50,7 +48,6 @@ export function ReportsPage() {
       .reduce((acc, t) => acc + t.amount, 0);
     return { income, expense, net: income - expense };
   }, [filteredTransactions]);
-
   // Prepare chart data
   const chartData = useMemo(() => {
     const categoryMap = new Map<string, number>();
@@ -65,7 +62,6 @@ export function ReportsPage() {
         const current = categoryMap.get(key) || 0;
         categoryMap.set(key, current + t.amount);
       });
-
     return Array.from(categoryMap.entries())
       .map(([id, value]) => {
         let name = 'غير محدد';
@@ -78,7 +74,29 @@ export function ReportsPage() {
       })
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
-
+  // Prepare Daily Treasury Data
+  const treasuryData = useMemo(() => {
+    const grouped = new Map<string, Map<string, { income: number; expense: number }>>();
+    filteredTransactions.forEach(tx => {
+      const dateKey = format(tx.date, 'yyyy-MM-dd');
+      if (!grouped.has(dateKey)) grouped.set(dateKey, new Map());
+      const dateGroup = grouped.get(dateKey)!;
+      if (!dateGroup.has(tx.walletId)) dateGroup.set(tx.walletId, { income: 0, expense: 0 });
+      const stats = dateGroup.get(tx.walletId)!;
+      if (tx.type === 'deposit') stats.income += tx.amount;
+      else stats.expense += tx.amount;
+    });
+    const result: { date: string; items: { walletId: string; income: number; expense: number }[] }[] = [];
+    Array.from(grouped.keys()).sort().reverse().forEach(dateKey => {
+      const dateGroup = grouped.get(dateKey)!;
+      const items: { walletId: string; income: number; expense: number }[] = [];
+      dateGroup.forEach((stats, walletId) => {
+        items.push({ walletId, ...stats });
+      });
+      result.push({ date: dateKey, items });
+    });
+    return result;
+  }, [filteredTransactions]);
   const generateTextReport = () => {
     const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
     let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
@@ -91,26 +109,20 @@ export function ReportsPage() {
     });
     return text;
   };
-
   const handleShare = async () => {
     if (!reportRef.current) return;
     setIsSharing(true);
     try {
-      // Small delay to ensure UI is ready for capture
       await new Promise(resolve => setTimeout(resolve, 100));
       const dataUrl = await toPng(reportRef.current, {
         cacheBust: true,
         backgroundColor: '#ffffff',
         pixelRatio: 2,
-        style: {
-          fontFamily: "'Cairo', sans-serif"
-        }
+        style: { fontFamily: "'Cairo', sans-serif" }
       });
-
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], `report-${format(new Date(), 'yyyy-MM-dd')}.png`, { type: 'image/png' });
-
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'تقرير المصروفات',
@@ -119,7 +131,6 @@ export function ReportsPage() {
         });
         toast.success('تمت المشاركة بنجاح');
       } else {
-        // Fallback to download
         const link = document.createElement('a');
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
@@ -128,14 +139,10 @@ export function ReportsPage() {
       }
     } catch (error) {
       console.error('Image share failed:', error);
-      // Fallback to text sharing
       try {
         const text = generateTextReport();
         if (navigator.share) {
-          await navigator.share({
-            title: 'تقرير المصروفات',
-            text: text
-          });
+          await navigator.share({ title: 'تقرير المصروفات', text: text });
         } else {
           await navigator.clipboard.writeText(text);
           toast.success('تم نسخ التقرير النصي للحافظة');
@@ -147,39 +154,55 @@ export function ReportsPage() {
       setIsSharing(false);
     }
   };
-
+  const handleExcelExport = () => {
+    try {
+      generateDailyTreasuryReport(filteredTransactions, wallets, range);
+      toast.success('تم تصدير مل�� Excel بنجاح');
+    } catch (error) {
+      console.error(error);
+      toast.error('فشل تصدير الملف');
+    }
+  };
   const getCategoryName = (tx: Transaction) => {
     if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
-
   const getWalletName = (id: string) => {
     return wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
   };
-
   return (
     <RtlWrapper>
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالي��</p>
         </div>
-        <Button
-          onClick={handleShare}
-          disabled={isSharing}
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
-        >
-          {isSharing ? 'جاري المعالجة...' : (
-            <>
-              <Share2 className="w-4 h-4" />
-              <span>مشاركة</span>
-            </>
-          )}
-        </Button>
+        {activeTab === 'general' ? (
+          <Button
+            onClick={handleShare}
+            disabled={isSharing}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
+          >
+            {isSharing ? 'جاري المعالجة...' : (
+              <>
+                <Share2 className="w-4 h-4" />
+                <span>مشاركة</span>
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={handleExcelExport}
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-xl"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>تصدير Excel</span>
+          </Button>
+        )}
       </header>
-
       {/* Filters */}
       <div className="px-6 mb-4">
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
@@ -204,115 +227,162 @@ export function ReportsPage() {
           ))}
         </div>
       </div>
-
-      {/* Report Content Area (Capturable) */}
-      <div className="flex-1 overflow-y-auto px-6 pb-24" ref={reportRef}>
-        <div className="bg-white dark:bg-slate-900 pb-8"> {/* Wrapper for clean capture background */}
-          {/* Date Header (Visible only in capture usually, but good to show always) */}
-          <div className="mb-6 text-center">
-            <p className="text-slate-400 text-xs">الفترة</p>
-            <p className="text-slate-900 dark:text-white font-bold">
-              {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
-            </p>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-100 dark:border-blue-800">
-              <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">الدخل</p>
-              <p className="text-lg font-bold text-blue-700 dark:text-blue-300 tabular-nums">{summary.income.toLocaleString()}</p>
-            </div>
-            <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-800">
-              <p className="text-xs text-red-600 dark:text-red-400 mb-1">المصروفات</p>
-              <p className="text-lg font-bold text-red-700 dark:text-red-300 tabular-nums">{summary.expense.toLocaleString()}</p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">الصافي</p>
-              <p className={cn(
-                "text-lg font-bold tabular-nums",
-                summary.net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600 dark:text-red-400"
-              )}>
-                {summary.net.toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          {/* Chart */}
-          {chartData.length > 0 && (
-            <div className="mb-8 h-64 w-full">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">توزيع المصروفات</h3>
-              <div className="h-56 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
+      <div className="flex-1 overflow-y-auto px-6 pb-24">
+        <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="general">التقرير العام</TabsTrigger>
+            <TabsTrigger value="treasury">الخزينة اليومية</TabsTrigger>
+          </TabsList>
+          <TabsContent value="general" className="space-y-6">
+            <div ref={reportRef} className="bg-white dark:bg-slate-900 pb-4">
+              {/* Date Header */}
+              <div className="mb-6 text-center">
+                <p className="text-slate-400 text-xs">الفترة</p>
+                <p className="text-slate-900 dark:text-white font-bold">
+                  {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
+                </p>
+              </div>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-100 dark:border-blue-800">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">الدخل</p>
+                  <p className="text-lg font-bold text-blue-700 dark:text-blue-300 tabular-nums">{summary.income.toLocaleString()}</p>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-800">
+                  <p className="text-xs text-red-600 dark:text-red-400 mb-1">المصروفات</p>
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300 tabular-nums">{summary.expense.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">الصافي</p>
+                  <p className={cn(
+                    "text-lg font-bold tabular-nums",
+                    summary.net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600 dark:text-red-400"
+                  )}>
+                    {summary.net.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              {/* Chart */}
+              {chartData.length > 0 && (
+                <div className="mb-8 h-64 w-full">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">توزيع المصروفات</h3>
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+              {/* Transactions Table */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
+                {filteredTransactions.length === 0 ? (
+                  <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                    <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className={cn(
+                            "w-2 h-10 rounded-full shrink-0",
+                            tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
+                          )} />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx)}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                              {getWalletName(tx.walletId)} • {format(tx.date, 'h:mm a', { locale: arSA })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-left shrink-0">
+                          <p className={cn(
+                            "font-bold text-sm tabular-nums",
+                            tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
+                          )}>
+                            {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+                <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
               </div>
             </div>
-          )}
-
-          {/* Transactions Table */}
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
-            {filteredTransactions.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className={cn(
-                        "w-2 h-10 rounded-full shrink-0",
-                        tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
-                      )} />
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {getWalletName(tx.walletId)} • {format(tx.date, 'h:mm a', { locale: arSA })}
-                        </p>
+          </TabsContent>
+          <TabsContent value="treasury" className="space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+              {treasuryData.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400 text-sm">لا توجد بيانات للعرض</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {treasuryData.map((day) => (
+                    <div key={day.date} className="p-4">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg inline-block">
+                        {format(new Date(day.date), 'PPP', { locale: arSA })}
+                      </h3>
+                      <div className="space-y-2">
+                        {day.items.map((item) => (
+                          <div key={item.walletId} className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <span className="font-medium text-slate-700 dark:text-slate-300 w-1/3 truncate">
+                              {getWalletName(item.walletId)}
+                            </span>
+                            <div className="flex-1 flex justify-end gap-4 text-xs">
+                              <div className="text-center">
+                                <span className="block text-slate-400 mb-0.5">مدين (دخل)</span>
+                                <span className="font-bold text-blue-600">{item.income.toLocaleString()}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className="block text-slate-400 mb-0.5">دائن (صرف)</span>
+                                <span className="font-bold text-red-600">{item.expense.toLocaleString()}</span>
+                              </div>
+                              <div className="text-center min-w-[60px]">
+                                <span className="block text-slate-400 mb-0.5">الصافي</span>
+                                <span className={cn(
+                                  "font-bold",
+                                  (item.income - item.expense) >= 0 ? "text-emerald-600" : "text-red-600"
+                                )}>
+                                  {(item.income - item.expense).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="text-left shrink-0">
-                      <p className={cn(
-                        "font-bold text-sm tabular-nums",
-                        tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
-                      )}>
-                        {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Footer for Report */}
-          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
-          </div>
-        </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
       <BottomNav />
     </RtlWrapper>
   );
 }
-//

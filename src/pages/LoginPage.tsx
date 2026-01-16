@@ -47,25 +47,25 @@ export function LoginPage() {
     // Validation
     const validation = LoginSchema.safeParse({ pin });
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0].message);
       return;
     }
     setIsLoading(true);
     try {
       const success = await login(pin);
       if (success) {
-        toast.success('تم تسجيل الدخول بنجاح');
+        toast.success('تم ��سجيل الدخول بنجاح');
         navigate('/dashboard');
       } else {
         if (useAppStore.getState().lockoutUntil) {
           toast.error('تم قفل المحاولات مؤقتاً');
         } else {
-          toast.error('كلمة المرور غير صحيحة');
+          toast.error('كلمة المرور غير ص��يحة');
         }
         setPin('');
       }
     } catch (error) {
-      toast.error('حدث خطأ أ��ناء تسجيل الدخول');
+      toast.error('حدث خطأ أثناء تسجيل الدخول');
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +75,7 @@ export function LoginPage() {
     // Validation
     const validation = LoginSchema.safeParse({ pin });
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0].message);
       return;
     }
     if (pin !== confirmPin) {
@@ -105,8 +105,8 @@ export function LoginPage() {
               Abu MaWaDa
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              {isSetup
-                ? (isLocked ? 'التطبيق مقفل' : 'تسجيل الدخول')
+              {isSetup 
+                ? (isLocked ? 'التطبيق مقفل' : 'تسجيل الدخول') 
                 : 'إعداد كلمة المرور الجديدة'}
             </p>
           </div>
@@ -139,8 +139,8 @@ export function LoginPage() {
                 disabled={lockoutTimer > 0}
               />
             </div>
-            <Button
-              type="submit"
+            <Button 
+              type="submit" 
               className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading || !pin || lockoutTimer > 0}
             >
@@ -179,8 +179,8 @@ export function LoginPage() {
                 />
               </div>
             </div>
-            <Button
-              type="submit"
+            <Button 
+              type="submit" 
               className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
               disabled={isLoading || !pin || !confirmPin}
             >

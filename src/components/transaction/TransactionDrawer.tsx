@@ -78,7 +78,7 @@ export function TransactionDrawer() {
       date: date
     });
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0].message);
       return;
     }
     let finalCategoryId = categoryId;
@@ -88,14 +88,14 @@ export function TransactionDrawer() {
         // Validate Custom Category Name
         const catValidation = CategorySchema.safeParse({ name: customCategoryName });
         if (!catValidation.success) {
-          toast.error(catValidation.error.errors[0].message);
+          toast.error(catValidation.error.issues[0].message);
           return;
         }
         if (saveCustomCategory) {
           // Add to permanent list
           const newId = await addCategory(customCategoryName.trim());
           if (!newId) {
-            toast.error('فشل إضافة البند الجديد');
+            toast.error('ف��ل إضافة البند الجديد');
             return;
           }
           finalCategoryId = newId;
@@ -122,10 +122,10 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       });
-      toast.success(type === 'expense' ? 'تم تسجيل الم��روف' : 'تم إضافة الرصيد');
+      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثناء حفظ العملية');
+      toast.error('حدث خطأ أثن��ء حفظ العملية');
     }
   };
   const handleCategorySelect = (id: string) => {
@@ -265,7 +265,7 @@ export function TransactionDrawer() {
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <Label htmlFor="save-category" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-                          حفظ في القائمة لاستخدامه مستق��لاً
+                          حفظ ��ي القائمة لاستخدامه مستقبلاً
                         </Label>
                         <Switch
                           id="save-category"
