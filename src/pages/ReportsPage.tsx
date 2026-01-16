@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
+import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,8 @@ export function ReportsPage() {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
   const wallets = useAppStore(s => s.wallets);
+  const settings = useAppStore(s => s.settings);
+  const currency = CURRENCIES[settings.currency];
   const [range, setRange] = useState<TimeRange>('today');
   const reportRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
@@ -58,14 +61,14 @@ export function ReportsPage() {
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
   const generateTextReport = () => {
-    const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
+    const dateStr = range === 'all' ? 'ج��يع العمليات' : format(new Date(), 'PPP', { locale: arSA });
     let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
-    text += `💰 الدخل: ${summary.income.toLocaleString()} ر.س\n`;
-    text += `💸 المصروفات: ${summary.expense.toLocaleString()} ر.س\n`;
-    text += `📊 الصافي: ${summary.net.toLocaleString()} ر.س\n\n`;
+    text += `💰 الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
+    text += `💸 المصروفات: ${summary.expense.toLocaleString()} ${currency.symbol}\n`;
+    text += `📊 الصافي: ${summary.net.toLocaleString()} ${currency.symbol}\n\n`;
     text += `*أهم البنود:*\n`;
     chartData.slice(0, 5).forEach(item => {
-      text += `- ${item.name}: ${item.value.toLocaleString()} ر.س\n`;
+      text += `- ${item.name}: ${item.value.toLocaleString()} ${currency.symbol}\n`;
     });
     return text;
   };
@@ -99,7 +102,7 @@ export function ReportsPage() {
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
         link.click();
-        toast.success('تم تحميل التقرير كصو��ة');
+        toast.success('تم تحميل التقرير كصورة');
       }
     } catch (error) {
       console.error('Image share failed:', error);
@@ -113,7 +116,7 @@ export function ReportsPage() {
           });
         } else {
           await navigator.clipboard.writeText(text);
-          toast.success('تم نسخ التقرير النصي للحافظة');
+          toast.success('تم نسخ التقرير النصي لل��افظة');
         }
       } catch (textError) {
         toast.error('فشل مشاركة التقرير');
@@ -131,18 +134,18 @@ export function ReportsPage() {
   };
   return (
     <RtlWrapper>
-      <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
+      <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">التقارير</h1>
-          <p className="text-sm text-slate-500">ملخص العمليات المالية</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
         </div>
         <Button
           onClick={handleShare}
           disabled={isSharing}
           size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
         >
-          {isSharing ? 'جاري المعالجة...' : (
+          {isSharing ? 'جاري المعالج��...' : (
             <>
               <Share2 className="w-4 h-4" />
               <span>مشاركة</span>
@@ -152,7 +155,7 @@ export function ReportsPage() {
       </header>
       {/* Filters */}
       <div className="px-6 mb-4">
-        <div className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
           {[
             { id: 'today', label: 'اليوم' },
             { id: 'week', label: 'الأسبوع' },
@@ -165,8 +168,8 @@ export function ReportsPage() {
               className={cn(
                 "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all whitespace-nowrap",
                 range === tab.id
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
               )}
             >
               {tab.label}
@@ -180,25 +183,25 @@ export function ReportsPage() {
           {/* Date Header (Visible only in capture usually, but good to show always) */}
           <div className="mb-6 text-center">
             <p className="text-slate-400 text-xs">الفترة</p>
-            <p className="text-slate-900 font-bold">
+            <p className="text-slate-900 dark:text-white font-bold">
               {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
             </p>
           </div>
           {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100">
-              <p className="text-xs text-blue-600 mb-1">الدخل</p>
-              <p className="text-lg font-bold text-blue-700 tabular-nums">{summary.income.toLocaleString()}</p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-100 dark:border-blue-800">
+              <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">الدخل</p>
+              <p className="text-lg font-bold text-blue-700 dark:text-blue-300 tabular-nums">{summary.income.toLocaleString()}</p>
             </div>
-            <div className="bg-red-50 p-3 rounded-2xl border border-red-100">
-              <p className="text-xs text-red-600 mb-1">المصروفات</p>
-              <p className="text-lg font-bold text-red-700 tabular-nums">{summary.expense.toLocaleString()}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-800">
+              <p className="text-xs text-red-600 dark:text-red-400 mb-1">المصروفات</p>
+              <p className="text-lg font-bold text-red-700 dark:text-red-300 tabular-nums">{summary.expense.toLocaleString()}</p>
             </div>
-            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-              <p className="text-xs text-slate-600 mb-1">الصافي</p>
+            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">الصافي</p>
               <p className={cn(
                 "text-lg font-bold tabular-nums",
-                summary.net >= 0 ? "text-slate-900" : "text-red-600"
+                summary.net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600 dark:text-red-400"
               )}>
                 {summary.net.toLocaleString()}
               </p>
@@ -207,7 +210,7 @@ export function ReportsPage() {
           {/* Chart */}
           {chartData.length > 0 && (
             <div className="mb-8 h-64 w-full">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">توزيع المصروفات</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">توزيع المصروفات</h3>
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -225,8 +228,8 @@ export function ReportsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => [`${value.toLocaleString()} ر.س`, 'الم��لغ']}
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" />
                   </PieChart>
@@ -236,23 +239,23 @@ export function ReportsPage() {
           )}
           {/* Transactions Table */}
           <div>
-            <h3 className="text-sm font-bold text-slate-900 mb-4">تفاصيل العمليات</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
             {filteredTransactions.length === 0 ? (
-              <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl">
+              <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
                 <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {filteredTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className={cn(
                         "w-2 h-10 rounded-full shrink-0",
                         tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
                       )} />
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-900 text-sm truncate">{getCategoryName(tx.categoryId)}</p>
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx.categoryId)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {getWalletName(tx.walletId)} • {format(tx.date, 'h:mm a', { locale: arSA })}
                         </p>
                       </div>
@@ -260,7 +263,7 @@ export function ReportsPage() {
                     <div className="text-left shrink-0">
                       <p className={cn(
                         "font-bold text-sm tabular-nums",
-                        tx.type === 'expense' ? "text-red-600" : "text-blue-600"
+                        tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
                       )}>
                         {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
                       </p>
@@ -271,7 +274,7 @@ export function ReportsPage() {
             )}
           </div>
           {/* Footer for Report */}
-          <div className="mt-8 pt-4 border-t border-slate-100 text-center">
+          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
             <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق مُحافظ</p>
           </div>
         </div>

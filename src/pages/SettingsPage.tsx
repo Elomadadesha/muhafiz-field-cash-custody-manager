@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/security';
+import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock } from 'lucide-react';
+import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -25,7 +26,6 @@ export function SettingsPage() {
   const restoreData = useAppStore(s => s.restoreData);
   const logout = useAppStore(s => s.logout);
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddCatOpen, setIsAddCatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,7 @@ export function SettingsPage() {
       await addCategory(newCategoryName.trim());
       setNewCategoryName('');
       setIsAddCatOpen(false);
-      toast.success('تم ��ضافة البند بنجاح');
+      toast.success('تم إضافة البند بنجاح');
     } catch (error) {
       toast.error('فشل إضافة البند');
     } finally {
@@ -66,7 +66,7 @@ export function SettingsPage() {
   };
   const handleBackup = async () => {
     if (!backupPassword) {
-      toast.error('الرجاء إدخ��ل كلمة مرور للتشفير');
+      toast.error('الرجاء إدخال كلمة مرور للتشفير');
       return;
     }
     setIsLoading(true);
@@ -88,7 +88,7 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الا��تياطية بنجاح');
+      toast.success('تم تصدير النسخة الاحتياطية بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
@@ -118,29 +118,71 @@ export function SettingsPage() {
   };
   return (
     <RtlWrapper>
-      <header className="px-6 pt-8 pb-4">
-        <h1 className="text-xl font-bold text-slate-900">الإع��ادات</h1>
-        <p className="text-sm text-slate-500">تخصيص التطبيق والأمان</p>
+      <header className="px-6 pt-8 pb-6 bg-white dark:bg-slate-900 sticky top-0 z-10 border-b border-slate-50 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
+            <Settings2 className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">الإعدادات</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">تخصيص التطبيق والأمان</p>
+          </div>
+        </div>
       </header>
-      <div className="flex-1 overflow-y-auto px-6 pb-24 space-y-8">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-24">
+        {/* General Settings */}
+        <section>
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
+            <Coins className="w-5 h-5 text-blue-600" />
+            <h2>إعدادات عامة</h2>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden p-4 space-y-4">
+            {/* Currency Selector */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                  <span className="text-xs font-bold">$</span>
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">عملة التطبيق</span>
+              </div>
+              <Select
+                value={settings.currency}
+                onValueChange={(v: any) => updateSettings({ currency: v })}
+              >
+                <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  {Object.entries(CURRENCIES).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>
+                      {val.label} ({val.symbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </section>
         {/* Security Section */}
         <section>
-          <div className="flex items-center gap-2 text-slate-900 font-bold mb-4">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
             <Shield className="w-5 h-5 text-blue-600" />
             <h2>الأمان والنسخ الاحتياطي</h2>
           </div>
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-4 space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden p-4 space-y-4">
             {/* Auto Lock */}
             <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-slate-700">القفل التلقائي</span>
-            </div>
-              <Select 
-                value={settings.autoLockMinutes.toString()} 
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">القفل التلقائي</span>
+              </div>
+              <Select
+                value={settings.autoLockMinutes.toString()}
                 onValueChange={(v) => updateSettings({ autoLockMinutes: parseInt(v) })}
               >
-                <SelectTrigger className="w-32 h-8 text-xs" dir="rtl">
+                <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
@@ -152,17 +194,17 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="h-px bg-slate-50" />
+            <div className="h-px bg-slate-50 dark:bg-slate-700" />
             {/* Backup & Restore Buttons */}
             <div className="grid grid-cols-2 gap-3">
               {/* Backup Dialog */}
               <Dialog open={isBackupOpen} onOpenChange={setIsBackupOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2 h-10">
-                  <Download className="w-4 h-4 text-blue-600" />
-                  نسخ احتياطي
-                </Button>
-              </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <Download className="w-4 h-4 text-blue-600" />
+                    نسخ احتياطي
+                  </Button>
+                </DialogTrigger>
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
@@ -171,8 +213,8 @@ export function SettingsPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <p className="text-sm text-slate-500">
-                      سيتم تشفير بياناتك بكلمة مرور. يجب عليك تذ��ر هذه الكلمة لاستعادة البيانات لاحقاً.
+                    <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                      سيتم تشفير بياناتك بكلمة مرور. يجب عليك تذكر هذه الكلمة لاستعادة البيانات لاحقاً.
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">كلمة مرور التشفير</Label>
@@ -181,25 +223,25 @@ export function SettingsPage() {
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
                         placeholder="أدخل كلمة مرور قوية"
-                        className="text-center"
+                        className="text-center h-12 rounded-xl"
                       />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600">
-                      {isLoading ? 'جاري التصدير...' : 'تصدير وحفظ'}
+                    <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
+                      {isLoading ? 'جاري الت��دير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
               {/* Restore Dialog */}
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2 h-10">
-                  <Upload className="w-4 h-4 text-blue-600" />
-                  استعادة
-                </Button>
-              </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <Upload className="w-4 h-4 text-blue-600" />
+                    استعادة
+                  </Button>
+                </DialogTrigger>
                 <DialogContent dir="rtl">
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
@@ -208,8 +250,8 @@ export function SettingsPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">
-                      تنبيه: استعادة البيانات ستقوم باستبدال جميع البيانات الحالية!
+                    <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
+                      تنبيه: استعادة البيانات ستقوم باستبدال جم��ع البيانات الحالية!
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
@@ -217,7 +259,7 @@ export function SettingsPage() {
                         type="file"
                         accept=".json"
                         onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
-                        className="text-right"
+                        className="text-right h-12 pt-2 rounded-xl"
                       />
                     </div>
                     <div className="space-y-2">
@@ -227,12 +269,12 @@ export function SettingsPage() {
                         value={backupPassword}
                         onChange={(e) => setBackupPassword(e.target.value)}
                         placeholder="أدخل كلمة المرور"
-                        className="text-center"
+                        className="text-center h-12 rounded-xl"
                       />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleRestore} disabled={isLoading || !backupPassword || !restoreFile} className="w-full bg-blue-600">
+                    <Button onClick={handleRestore} disabled={isLoading || !backupPassword || !restoreFile} className="w-full bg-blue-600 h-12 rounded-xl">
                       {isLoading ? 'جاري الاستعادة...' : 'استعادة البيانات'}
                     </Button>
                   </DialogFooter>
@@ -244,22 +286,22 @@ export function SettingsPage() {
         {/* Categories Section */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-slate-900 font-bold">
+            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
               <Tag className="w-5 h-5 text-blue-600" />
               <h2>بنود الصرف</h2>
             </div>
             <Dialog open={isAddCatOpen} onOpenChange={setIsAddCatOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs">
-                <Plus className="w-3 h-3 ml-1 text-blue-600" />
-                إضافة
-              </Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg">
+                  <Plus className="w-3 h-3 ml-1 text-blue-600" />
+                  إضافة
+                </Button>
+              </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
                 <DialogHeader>
-                  <DialogTitle className="text-right">إضافة بند صرف جدي��</DialogTitle>
+                  <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم البند الجديد لإضافته إلى قائمة المصروفات.
+                    أدخل اسم البند الجديد ل��ضافته إلى قائمة المصروفات.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -268,30 +310,35 @@ export function SettingsPage() {
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="مثال: ضيافة"
-                    className="text-right"
+                    className="text-right h-12 rounded-xl"
                   />
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleAddCategory} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+                  <Button onClick={handleAddCategory} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl">
                     {isLoading ? 'جاري الحفظ...' : 'حفظ'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
               <div
                 key={cat.id}
-                className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50' : ''}`}
+                className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
               >
-                <span className="text-sm font-medium text-slate-700">{cat.name}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-500">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
+                </div>
                 {cat.isSystem ? (
-                  <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-full">نظام</span>
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-400 px-2 py-1 rounded-full">ن��ام</span>
                 ) : (
                   <button
                     onClick={() => handleDeleteCategory(cat.id)}
-                    className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors"
+                    className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -302,22 +349,27 @@ export function SettingsPage() {
         </section>
         {/* Wallets Section */}
         <section>
-          <div className="flex items-center gap-2 text-slate-900 font-bold mb-4">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
             <Wallet className="w-5 h-5 text-blue-600" />
             <h2>إدارة العُهد</h2>
           </div>
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {wallets.length === 0 ? (
-              <div className="p-4 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
+              <div className="p-6 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
                 <div
                   key={wallet.id}
-                  className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50' : ''}`}
+                  className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
                 >
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{wallet.name}</p>
-                    <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} ر.س</p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${wallet.isActive ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'}`}>
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{wallet.name}</p>
+                      <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} {CURRENCIES[settings.currency].symbol}</p>
+                    </div>
                   </div>
                   <Switch
                     checked={wallet.isActive}
@@ -329,21 +381,21 @@ export function SettingsPage() {
           </div>
         </section>
         {/* App Info & Logout */}
-        <section className="pt-4 border-t border-slate-100">
-          <div className="bg-slate-50 rounded-xl p-4 mb-4">
-            <div className="flex items-center gap-2 text-slate-600 mb-2">
+        <section className="pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-2">
               <Info className="w-4 h-4" />
-              <span className="text-sm font-bold">عن التطبي��</span>
+              <span className="text-sm font-bold">عن التطبيق</span>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
               تطبيق مُحافظ - الإصدار المحلي الآمن v2.0.0
               <br />
-              جميع البيانات محفوظة على جها��ك فقط.
+              جميع البيانات محفوظة على جهازك فقط.
             </p>
           </div>
           <Button
             variant="destructive"
-            className="w-full gap-2"
+            className="w-full gap-2 h-12 rounded-xl shadow-lg shadow-red-500/10"
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />

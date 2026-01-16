@@ -8,7 +8,13 @@ const DB_KEYS = {
 export interface AppSettings {
   autoLockMinutes: number; // 0 = disabled
   lastActive: number;
+  currency: 'SAR' | 'EGP' | 'USD';
 }
+export const CURRENCIES = {
+  SAR: { label: 'ريال سع��دي', symbol: 'ر.س' },
+  EGP: { label: 'جنيه مصري', symbol: 'ج.م' },
+  USD: { label: 'دولار أمريكي', symbol: '$' },
+};
 const INITIAL_DATA: AppData = {
   wallets: [],
   transactions: [],
@@ -25,6 +31,7 @@ const INITIAL_DATA: AppData = {
 const INITIAL_SETTINGS: AppSettings = {
   autoLockMinutes: 5,
   lastActive: Date.now(),
+  currency: 'SAR',
 };
 export const db = {
   // Data Operations
@@ -48,7 +55,7 @@ export const db = {
   // Settings Operations
   getSettings: async (): Promise<AppSettings> => {
     const settings = await get<AppSettings>(DB_KEYS.SETTINGS);
-    return settings || INITIAL_SETTINGS;
+    return { ...INITIAL_SETTINGS, ...settings }; // Merge to ensure new fields exist
   },
   saveSettings: async (settings: AppSettings): Promise<void> => {
     await set(DB_KEYS.SETTINGS, settings);

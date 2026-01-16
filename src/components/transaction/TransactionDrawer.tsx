@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
+import { CURRENCIES } from '@/lib/db';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag } from 'lucide-react';
+import { CalendarIcon, Banknote, Wrench, Bus, Utensils, ShoppingBag, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 // Helper to map category names to icons
 const getCategoryIcon = (name: string) => {
@@ -18,13 +19,9 @@ const getCategoryIcon = (name: string) => {
   if (name.includes('وقود')) return <Banknote className="w-5 h-5" />;
   if (name.includes('صيانة')) return <Wrench className="w-5 h-5" />;
   if (name.includes('إعاشة')) return <Utensils className="w-5 h-5" />;
-  if (name.includes('قطع')) return <SettingsIcon className="w-5 h-5" />;
+  if (name.includes('قطع')) return <Settings className="w-5 h-5" />;
   return <ShoppingBag className="w-5 h-5" />;
 };
-// Simple icon wrapper
-const SettingsIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-);
 export function TransactionDrawer() {
   const isOpen = useAppStore(s => s.isTransactionDrawerOpen);
   const closeDrawer = useAppStore(s => s.closeTransactionDrawer);
@@ -33,6 +30,8 @@ export function TransactionDrawer() {
   const selectedWalletId = useAppStore(s => s.selectedWalletId);
   const addTransaction = useAppStore(s => s.addTransaction);
   const isLoading = useAppStore(s => s.isLoading);
+  const settings = useAppStore(s => s.settings);
+  const currency = CURRENCIES[settings.currency];
   const [type, setType] = useState<'expense' | 'deposit'>('expense');
   const [walletId, setWalletId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
@@ -59,15 +58,15 @@ export function TransactionDrawer() {
   }, [isOpen, selectedWalletId, wallets, walletId]);
   const handleSubmit = async () => {
     if (!walletId) {
-      toast.error('الر��اء اختيار المحفظة');
+      toast.error('الرجاء اختيار المحفظة');
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      toast.error('الرجاء إدخال مبلغ صح��ح');
+      toast.error('الرجاء إدخال مبلغ صحيح');
       return;
     }
     if (type === 'expense' && !categoryId) {
-      toast.error('الرجاء اختيار بن�� الصرف');
+      toast.error('الرجاء اختيار بند الصرف');
       return;
     }
     try {
@@ -79,29 +78,32 @@ export function TransactionDrawer() {
         date: date ? date.getTime() : Date.now(),
         notes
       });
-      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الر��يد');
+      toast.success(type === 'expense' ? 'تم تسجيل المصروف' : 'تم إضافة الرصيد');
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثناء ��فظ العملية');
+      toast.error('حدث خطأ أثناء حفظ العملية');
     }
   };
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && closeDrawer()}>
-      <DrawerContent className="max-h-[90vh]" dir="rtl">
+      <DrawerContent className="max-h-[95vh]" dir="rtl">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader>
-            <DrawerTitle className="text-center text-xl font-bold">تسجيل عملية جديد��</DrawerTitle>
+            <DrawerTitle className="text-center text-xl font-bold">تسجيل ��ملية جديدة</DrawerTitle>
+            <DrawerDescription className="text-center text-slate-500">
+              أدخل تفاصيل العملية المالية أدناه
+            </DrawerDescription>
           </DrawerHeader>
-          <div className="p-4 space-y-6 overflow-y-auto max-h-[70vh]">
+          <div className="p-4 space-y-6 overflow-y-auto max-h-[75vh]">
             {/* Type Toggle */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
               <button
                 onClick={() => setType('expense')}
                 className={cn(
-                  "py-2.5 text-sm font-medium rounded-lg transition-all",
+                  "py-3 text-sm font-bold rounded-xl transition-all",
                   type === 'expense'
-                    ? "bg-white text-red-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
                 )}
               >
                 صرف (مصروفات)
@@ -109,10 +111,10 @@ export function TransactionDrawer() {
               <button
                 onClick={() => setType('deposit')}
                 className={cn(
-                  "py-2.5 text-sm font-medium rounded-lg transition-all",
+                  "py-3 text-sm font-bold rounded-xl transition-all",
                   type === 'deposit'
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
                 )}
               >
                 إيداع (تغذية)
@@ -128,23 +130,24 @@ export function TransactionDrawer() {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="text-center text-3xl font-bold h-16 rounded-2xl border-slate-200 focus:border-primary focus:ring-primary/20 ltr-placeholder"
+                  className="text-center text-4xl font-bold h-20 rounded-2xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-primary/20 ltr-placeholder bg-slate-50 dark:bg-slate-900"
                   autoFocus
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">ر.س</span>
+                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-lg">{currency.symbol}</span>
               </div>
             </div>
             {/* Wallet Selection */}
             <div className="space-y-2">
               <Label className="text-right block text-slate-500">المحفظة</Label>
               <Select value={walletId} onValueChange={setWalletId}>
-                <SelectTrigger className="h-12 rounded-xl border-slate-200 text-right flex-row-reverse">
+                <SelectTrigger className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right flex-row-reverse bg-white dark:bg-slate-800">
                   <SelectValue placeholder="اختر المحفظة" />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
                   {wallets.filter(w => w.isActive).map(w => (
-                    <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse">
-                      {w.name} ({w.balance.toLocaleString()} ر.س)
+                    <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse py-3">
+                      <span className="font-medium">{w.name}</span>
+                      <span className="text-slate-400 text-xs mr-2">({w.balance.toLocaleString()} {currency.symbol})</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -160,15 +163,15 @@ export function TransactionDrawer() {
                       key={cat.id}
                       onClick={() => setCategoryId(cat.id)}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all",
+                        "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
                         categoryId === cat.id
-                          ? "border-blue-600 bg-blue-50 text-blue-600"
-                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                          ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
+                          : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
                       )}
                     >
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        categoryId === cat.id ? "bg-blue-600 text-white" : "bg-slate-100"
+                        "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                        categoryId === cat.id ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-700"
                       )}>
                         {getCategoryIcon(cat.name)}
                       </div>
@@ -187,7 +190,7 @@ export function TransactionDrawer() {
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-right font-normal h-12 rounded-xl border-slate-200",
+                        "w-full justify-start text-right font-normal h-14 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800",
                         !date && "text-muted-foreground"
                       )}
                     >
@@ -211,8 +214,8 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفا��يل..."
-                  className="h-12 rounded-xl border-slate-200 text-right"
+                  placeholder="أضف تفاصيل..."
+                  className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right bg-white dark:bg-slate-800"
                 />
               </div>
             </div>
