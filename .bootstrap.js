@@ -81,7 +81,8 @@ function runSetupCommands() {
     "bun add html-to-image@^1.11.0",
     "bun add vite-plugin-pwa@^0.19.0",
     "bun add @fontsource/tajawal@^5.0.0",
-    "bun add recharts"
+    "bun add recharts",
+    "bun add idb-keyval"
 ];
     
     if (commands.length === 0) {
