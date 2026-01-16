@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/security';
 import { CURRENCIES } from '@/lib/db';
@@ -54,7 +54,7 @@ export function SettingsPage() {
         await deleteCategory(id);
         toast.success('تم حذف البند');
       } catch (error) {
-        toast.error('لا يمكن حذف هذا البند');
+        toast.error('لا يمك�� حذف هذا البند');
       }
     }
   };
@@ -88,12 +88,12 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الاحتياطية بنجاح');
+      toast.success('تم ��صدير النسخة الاحتياطية بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
       console.error(error);
-      toast.error('فشل إنشاء النسخة الاحتياطية');
+      toast.error('فشل إن��اء النسخة الاحتياطية');
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +105,7 @@ export function SettingsPage() {
       const text = await restoreFile.text();
       const data = await decryptData(text, backupPassword);
       await restoreData(data);
-      toast.success('تم استعادة الب��انات بنجاح');
+      toast.success('تم استعادة البيانات بنجاح');
       setIsRestoreOpen(false);
       setBackupPassword('');
       setRestoreFile(null);
@@ -145,8 +145,8 @@ export function SettingsPage() {
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">عملة التطبيق</span>
               </div>
-              <Select
-                value={settings.currency}
+              <Select 
+                value={settings.currency} 
                 onValueChange={(v: any) => updateSettings({ currency: v })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -178,8 +178,8 @@ export function SettingsPage() {
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">القفل التلقائي</span>
               </div>
-              <Select
-                value={settings.autoLockMinutes.toString()}
+              <Select 
+                value={settings.autoLockMinutes.toString()} 
                 onValueChange={(v) => updateSettings({ autoLockMinutes: parseInt(v) })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -217,7 +217,7 @@ export function SettingsPage() {
                       سيتم تشفير بياناتك بكلمة مرور. يجب عليك تذكر هذه الكلمة لاستعادة البيانات لاحقاً.
                     </p>
                     <div className="space-y-2">
-                      <Label className="text-right block">كلمة مرور التشفير</Label>
+                      <Label className="text-right block">كلمة مرور الت��فير</Label>
                       <Input
                         type="password"
                         value={backupPassword}
@@ -229,7 +229,7 @@ export function SettingsPage() {
                   </div>
                   <DialogFooter>
                     <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
-                      {isLoading ? 'جاري الت��دير...' : 'تصدير وحفظ'}
+                      {isLoading ? 'جاري التصدير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -246,12 +246,12 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      اختر ملف النسخة الاحتياطية وأدخل كلمة المرور لاسترجاع البيانات.
+                      اختر ملف النسخة الاحتياطية و��دخل كلمة المرور لاسترجاع البيانات.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
-                      تنبيه: استعادة البيانات ستقوم باستبدال جم��ع البيانات الحالية!
+                      تنبيه: استعادة البيانات ستقوم باستبدال جميع البيانات الحالية!
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
@@ -301,7 +301,7 @@ export function SettingsPage() {
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم البند الجديد ل��ضافته إلى قائمة المصروفات.
+                    أدخل اسم البند الجديد لإضافته إلى قائمة المصروفات.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -323,8 +323,8 @@ export function SettingsPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
-              <div
-                key={cat.id}
+              <div 
+                key={cat.id} 
                 className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
               >
                 <div className="flex items-center gap-3">
@@ -334,9 +334,9 @@ export function SettingsPage() {
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
                 </div>
                 {cat.isSystem ? (
-                  <span className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-400 px-2 py-1 rounded-full">ن��ام</span>
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-400 px-2 py-1 rounded-full">نظام</span>
                 ) : (
-                  <button
+                  <button 
                     onClick={() => handleDeleteCategory(cat.id)}
                     className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
@@ -358,8 +358,8 @@ export function SettingsPage() {
               <div className="p-6 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
-                <div
-                  key={wallet.id}
+                <div 
+                  key={wallet.id} 
                   className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
                 >
                   <div className="flex items-center gap-3">
@@ -371,9 +371,9 @@ export function SettingsPage() {
                       <p className="text-xs text-slate-400">{wallet.balance.toLocaleString()} {CURRENCIES[settings.currency].symbol}</p>
                     </div>
                   </div>
-                  <Switch
-                    checked={wallet.isActive}
-                    onCheckedChange={() => toggleWalletStatus(wallet.id)}
+                  <Switch 
+                    checked={wallet.isActive} 
+                    onCheckedChange={() => toggleWalletStatus(wallet.id)} 
                   />
                 </div>
               ))
@@ -388,13 +388,13 @@ export function SettingsPage() {
               <span className="text-sm font-bold">عن التطبيق</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
-              تطبيق مُحافظ - الإصدار المحلي الآمن v2.0.0
+              تطبيق Abu MaWaDa - الإصدار المحلي الآمن v2.0.0
               <br />
               جميع البيانات محفوظة على جهازك فقط.
             </p>
           </div>
-          <Button
-            variant="destructive"
+          <Button 
+            variant="destructive" 
             className="w-full gap-2 h-12 rounded-xl shadow-lg shadow-red-500/10"
             onClick={handleLogout}
           >

@@ -55,15 +55,15 @@ export function ReportsPage() {
       });
     return Array.from(categoryMap.entries())
       .map(([id, value]) => ({
-        name: categories.find(c => c.id === id)?.name || 'غير محدد',
+        name: categories.find(c => c.id === id)?.name || 'غير مح��د',
         value
       }))
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
   const generateTextReport = () => {
-    const dateStr = range === 'all' ? 'ج��يع العمليات' : format(new Date(), 'PPP', { locale: arSA });
+    const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
     let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
-    text += `💰 الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
+    text += `���� الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
     text += `💸 المصروفات: ${summary.expense.toLocaleString()} ${currency.symbol}\n`;
     text += `📊 الصافي: ${summary.net.toLocaleString()} ${currency.symbol}\n\n`;
     text += `*أهم البنود:*\n`;
@@ -95,14 +95,14 @@ export function ReportsPage() {
           text: generateTextReport(),
           files: [file]
         });
-        toast.success('تمت المشاركة بنجاح');
+        toast.success('تم�� المشاركة بنجاح');
       } else {
         // Fallback to download
         const link = document.createElement('a');
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
         link.click();
-        toast.success('تم تحميل التقرير كصورة');
+        toast.success('تم تحميل ال��قرير كصورة');
       }
     } catch (error) {
       console.error('Image share failed:', error);
@@ -126,7 +126,7 @@ export function ReportsPage() {
     }
   };
   const getCategoryName = (id: string) => {
-    if (id === 'deposit_sys') return 'تغذية رصيد';
+    if (id === 'deposit_sys') return 'تغ��ية رصيد';
     return categories.find(c => c.id === id)?.name || 'غير محدد';
   };
   const getWalletName = (id: string) => {
@@ -139,13 +139,13 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
         </div>
-        <Button
-          onClick={handleShare}
+        <Button 
+          onClick={handleShare} 
           disabled={isSharing}
-          size="sm"
+          size="sm" 
           className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
         >
-          {isSharing ? 'جاري المعالج��...' : (
+          {isSharing ? 'جاري المعال��ة...' : (
             <>
               <Share2 className="w-4 h-4" />
               <span>مشاركة</span>
@@ -227,7 +227,7 @@ export function ReportsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip
+                    <Tooltip 
                       formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
@@ -242,7 +242,7 @@ export function ReportsPage() {
             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
             {filteredTransactions.length === 0 ? (
               <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                <p className="text-slate-400 text-sm">لا توجد عمليات في هذه الفترة</p>
+                <p className="text-slate-400 text-sm">لا توج�� عمليات في هذه الفترة</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -275,7 +275,7 @@ export function ReportsPage() {
           </div>
           {/* Footer for Report */}
           <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق مُحافظ</p>
+            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
           </div>
         </div>
       </div>

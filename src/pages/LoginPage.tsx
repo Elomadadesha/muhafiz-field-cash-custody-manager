@@ -29,7 +29,7 @@ export function LoginPage() {
         toast.success('تم تسجيل الدخول بنجاح');
         navigate('/dashboard');
       } else {
-        toast.error('كلمة المرور غير صحيحة');
+        toast.error('كلمة الم��ور غير صحيحة');
         setPin('');
       }
     } catch (error) {
@@ -66,11 +66,11 @@ export function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/20 mb-4">
             {isSetup ? <Lock className="w-10 h-10" /> : <ShieldCheck className="w-10 h-10" />}
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">مُحافظ</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Abu MaWaDa</h1>
           <p className="text-slate-500">
-            {isSetup 
-              ? (isLocked ? 'التطبيق مقف��' : 'تسجيل الدخول') 
-              : 'إعداد كلمة المرور الجديدة'}
+            {isSetup
+              ? (isLocked ? 'التطبيق مق��ل' : 'تسجيل الدخول')
+              : 'إعداد كلمة المرور الجديد��'}
           </p>
         </div>
         {isSetup ? (
@@ -90,8 +90,8 @@ export function LoginPage() {
                 autoFocus
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
               disabled={isLoading || !pin}
             >
@@ -130,8 +130,8 @@ export function LoginPage() {
                 />
               </div>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
               disabled={isLoading || !pin || !confirmPin}
             >
@@ -141,7 +141,7 @@ export function LoginPage() {
           </form>
         )}
         <p className="text-center text-xs text-slate-400 mt-8">
-          نسخة محلية آمنة v2.0.0
+          نسخة محلية آمن�� v2.0.0
         </p>
       </div>
     </RtlWrapper>
