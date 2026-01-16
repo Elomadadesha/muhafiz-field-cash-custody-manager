@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -5,9 +6,10 @@ import { WalletDetailPage } from '@/pages/WalletDetailPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { useAppStore } from '@/lib/store';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
 import { useAutoLock } from '@/hooks/use-auto-lock';
+import { isSecureContextAvailable } from '@/lib/security';
 // Auth Guard
 function ProtectedRoute() {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
@@ -77,6 +79,15 @@ const router = createBrowserRouter([
   }
 ]);
 export function App() {
+  useEffect(() => {
+    // Check for security context on mount
+    if (!isSecureContextAvailable()) {
+      toast.warning(
+        "ميزات ال��مان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).",
+        { duration: 10000 }
+      );
+    }
+  }, []);
   return (
     <>
       <RouterProvider router={router} />

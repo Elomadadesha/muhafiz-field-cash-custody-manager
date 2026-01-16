@@ -3,7 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
-import { Share2, Download, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { Share2, Copy, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { format, isSameDay, isSameWeek, isSameMonth, startOfDay, endOfDay } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -25,7 +25,7 @@ export function ReportsPage() {
     return transactions.filter(t => {
       const date = new Date(t.date);
       if (range === 'today') return isSameDay(date, now);
-      if (range === 'week') return isSameWeek(date, now, { weekStartsOn: 6 }); // Week starts on Saturday in many Arab countries
+      if (range === 'week') return isSameWeek(date, now, { weekStartsOn: 6 });
       if (range === 'month') return isSameMonth(date, now);
       return true;
     }).sort((a, b) => b.date - a.date);
@@ -56,39 +56,67 @@ export function ReportsPage() {
       }))
       .sort((a, b) => b.value - a.value);
   }, [filteredTransactions, categories]);
+  const generateTextReport = () => {
+    const dateStr = range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA });
+    let text = `*تقرير المصروفات - ${dateStr}*\n\n`;
+    text += `💰 الدخل: ${summary.income.toLocaleString()} ر.س\n`;
+    text += `💸 المصروفات: ${summary.expense.toLocaleString()} ر.س\n`;
+    text += `📊 الصافي: ${summary.net.toLocaleString()} ر.س\n\n`;
+    text += `*أهم البنود:*\n`;
+    chartData.slice(0, 5).forEach(item => {
+      text += `- ${item.name}: ${item.value.toLocaleString()} ر.س\n`;
+    });
+    return text;
+  };
   const handleShare = async () => {
     if (!reportRef.current) return;
     setIsSharing(true);
     try {
       // Small delay to ensure UI is ready for capture
       await new Promise(resolve => setTimeout(resolve, 100));
-      const dataUrl = await toPng(reportRef.current, { 
+      const dataUrl = await toPng(reportRef.current, {
         cacheBust: true,
         backgroundColor: '#ffffff',
-        pixelRatio: 2
+        pixelRatio: 2,
+        style: {
+          fontFamily: "'Cairo', sans-serif"
+        }
       });
-      // Convert data URL to Blob
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], `report-${format(new Date(), 'yyyy-MM-dd')}.png`, { type: 'image/png' });
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'تقرير المصروفات',
-          text: `تقرير المصروفات - ${format(new Date(), 'PPP', { locale: arSA })}`,
+          text: generateTextReport(),
           files: [file]
         });
-        toast.success('تمت المشا��كة بنجاح');
+        toast.success('تم�� المشاركة بنجاح');
       } else {
         // Fallback to download
         const link = document.createElement('a');
         link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
         link.href = dataUrl;
         link.click();
-        toast.success('تم تحميل ��لتقرير كصورة');
+        toast.success('تم تحميل التقرير كصورة');
       }
     } catch (error) {
-      console.error('Share failed:', error);
-      toast.error('��شل مشاركة التقرير');
+      console.error('Image share failed:', error);
+      // Fallback to text sharing
+      try {
+        const text = generateTextReport();
+        if (navigator.share) {
+          await navigator.share({
+            title: 'تقرير المصروفات',
+            text: text
+          });
+        } else {
+          await navigator.clipboard.writeText(text);
+          toast.success('تم نسخ التقرير النصي للحافظة');
+        }
+      } catch (textError) {
+        toast.error('فشل مشاركة التقرير');
+      }
     } finally {
       setIsSharing(false);
     }
@@ -125,9 +153,9 @@ export function ReportsPage() {
       <div className="px-6 mb-4">
         <div className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
           {[
-            { id: 'today', label: '��ليوم' },
+            { id: 'today', label: 'اليوم' },
             { id: 'week', label: 'الأسبوع' },
-            { id: 'month', label: 'الش��ر' },
+            { id: 'month', label: 'الشهر' },
             { id: 'all', label: 'الكل' },
           ].map((tab) => (
             <button
@@ -179,28 +207,30 @@ export function ReportsPage() {
           {chartData.length > 0 && (
             <div className="mb-8 h-64 w-full">
               <h3 className="text-sm font-bold text-slate-900 mb-4">توزيع المصروفات</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => [`${value.toLocaleString()} ر.س`, 'المبلغ']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => [`${value.toLocaleString()} ر.س`, 'المبلغ']}
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
           {/* Transactions Table */}
@@ -241,7 +271,7 @@ export function ReportsPage() {
           </div>
           {/* Footer for Report */}
           <div className="mt-8 pt-4 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق مُحافظ</p>
+            <p className="text-xs text-slate-400">تم إنشاء التقرير بوا��طة تطبيق مُحافظ</p>
           </div>
         </div>
       </div>

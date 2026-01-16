@@ -2,17 +2,37 @@
  * Security utilities using Web Crypto API
  * - SHA-256 for password hashing
  * - AES-GCM for backup encryption/decryption
+ * - Includes environment checks to prevent crashes in insecure contexts
  */
+// Check if the environment supports Web Crypto API
+export function isSecureContextAvailable(): boolean {
+  return typeof window !== 'undefined' && 
+         window.crypto !== undefined && 
+         window.crypto.subtle !== undefined;
+}
+// Helper to throw friendly error if security is unavailable
+function ensureSecureContext() {
+  if (!isSecureContextAvailable()) {
+    throw new Error("ميزات الأمان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).");
+  }
+}
 // Hash a password for storage
 export async function hashPassword(password: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+  ensureSecureContext();
+  try {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  } catch (error) {
+    console.error("Hashing failed:", error);
+    throw new Error("فشل معالجة كلمة المرور");
+  }
 }
 // Generate a key from a password for encryption
 async function getKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  ensureSecureContext();
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -36,29 +56,35 @@ async function getKeyFromPassword(password: string, salt: Uint8Array): Promise<C
 }
 // Encrypt data object to a string
 export async function encryptData(data: any, password: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await getKeyFromPassword(password, salt);
-  const encodedData = new TextEncoder().encode(JSON.stringify(data));
-  const encryptedContent = await crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv: iv
-    },
-    key,
-    encodedData
-  );
-  // Combine salt + iv + ciphertext for storage
-  // We'll use a simple JSON structure to hold these components encoded as base64
-  const payload = {
-    salt: Array.from(salt),
-    iv: Array.from(iv),
-    data: Array.from(new Uint8Array(encryptedContent))
-  };
-  return JSON.stringify(payload);
+  ensureSecureContext();
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await getKeyFromPassword(password, salt);
+    const encodedData = new TextEncoder().encode(JSON.stringify(data));
+    const encryptedContent = await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv: iv
+      },
+      key,
+      encodedData
+    );
+    // Combine salt + iv + ciphertext for storage
+    const payload = {
+      salt: Array.from(salt),
+      iv: Array.from(iv),
+      data: Array.from(new Uint8Array(encryptedContent))
+    };
+    return JSON.stringify(payload);
+  } catch (error) {
+    console.error("Encryption failed:", error);
+    throw new Error("فشل تشفير ال��يانات");
+  }
 }
 // Decrypt string to data object
 export async function decryptData(encryptedString: string, password: string): Promise<any> {
+  ensureSecureContext();
   try {
     const payload = JSON.parse(encryptedString);
     if (!payload.salt || !payload.iv || !payload.data) {
@@ -80,6 +106,6 @@ export async function decryptData(encryptedString: string, password: string): Pr
     return JSON.parse(decodedString);
   } catch (error) {
     console.error("Decryption failed:", error);
-    throw new Error("فشل فك التش��ير. تأكد من صحة كلمة المرور.");
+    throw new Error("فشل فك التشفير. تأكد من صحة كلمة المرور.");
   }
 }

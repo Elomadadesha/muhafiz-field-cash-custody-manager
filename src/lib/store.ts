@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AppData, Wallet, Transaction, Category } from '@/types/app';
 import { db, AppSettings } from '@/lib/db';
 import { hashPassword } from '@/lib/security';
+import { v4 as uuidv4 } from 'uuid';
 interface AppState {
   // Auth State
   isAuthenticated: boolean;
@@ -54,7 +55,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isTransactionDrawerOpen: false,
   selectedWalletId: null,
   init: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       // Check if password exists
       const hash = await db.getPasswordHash();
@@ -64,15 +65,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       const settings = await db.getSettings();
       set({
         isSetup,
-        wallets: data.wallets,
-        transactions: data.transactions,
-        categories: data.categories,
-        settings,
+        wallets: data.wallets || [],
+        transactions: data.transactions || [],
+        categories: data.categories || [],
+        settings: settings || { autoLockMinutes: 5, lastActive: Date.now() },
         isLoading: false
       });
     } catch (err) {
       console.error('Init failed:', err);
-      set({ isLoading: false, error: 'فشل تحميل البيانات' });
+      // Fallback to safe empty state to prevent app crash
+      set({ 
+        isLoading: false, 
+        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
+        wallets: [],
+        transactions: [],
+        categories: []
+      });
     }
   },
   setupApp: async (password: string) => {
@@ -83,6 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isSetup: true, isAuthenticated: true, isLocked: false, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: 'فشل إعداد التطبيق' });
+      throw err;
     }
   },
   login: async (password: string) => {
@@ -114,7 +123,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const newWallet: Wallet = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name,
         balance: initialBalance,
         isActive: true,
@@ -159,7 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const newTx: Transaction = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         createdAt: Date.now(),
         ...data
       };
@@ -175,8 +184,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         return w;
       });
       const newTransactions = [newTx, ...state.transactions];
-      set({
-        wallets: updatedWallets,
+      set({ 
+        wallets: updatedWallets, 
         transactions: newTransactions,
         isLoading: false,
         isTransactionDrawerOpen: false,
@@ -196,7 +205,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const newCategory: Category = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name,
         isSystem: false
       };
