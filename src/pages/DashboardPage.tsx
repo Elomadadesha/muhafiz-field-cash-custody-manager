@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Logo } from '@/components/ui/logo';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -40,17 +41,20 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بن��اح');
+    toast.success('تم إضافة المحفظة ��نجاح');
   };
   return (
     <RtlWrapper>
       {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-20">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">مرحبا مصطفى</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
-          </p>
+        <div className="flex items-center gap-3">
+          <Logo size="sm" />
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">مرحبا مصطفى</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
+            </p>
+          </div>
         </div>
         <button className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors relative">
           <Bell className="w-5 h-5" />
@@ -73,7 +77,7 @@ export function DashboardPage() {
           <div className="relative z-10">
             <p className="text-blue-100 text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]"></span>
-              إجمال�� الرصيد الحالي
+              إجمالي الرصيد الحالي
             </p>
             <div className="flex items-baseline gap-2 mb-8">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums drop-shadow-sm">
@@ -148,7 +152,7 @@ export function DashboardPage() {
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة عُهدة جديدة</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم ��لعُهدة والرصيد الافتتاحي لإنشاء محفظة جديدة.
+                    أدخل اسم العُهدة والرصيد الافتتاحي لإنشاء محفظة جديدة.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
