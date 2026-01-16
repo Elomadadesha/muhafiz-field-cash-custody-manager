@@ -11,7 +11,7 @@ export interface AppSettings {
   currency: 'SAR' | 'EGP' | 'USD';
 }
 export const CURRENCIES = {
-  SAR: { label: 'ريال ��عودي', symbol: 'ر.س' },
+  SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
   EGP: { label: 'جنيه مصري', symbol: 'ج.م' },
   USD: { label: 'دولار أمريكي', symbol: '$' },
 };
