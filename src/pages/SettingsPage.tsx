@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2, Pencil } from 'lucide-react';
+import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2, Pencil, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -24,7 +24,6 @@ export function SettingsPage() {
   const addCategory = useAppStore(s => s.addCategory);
   const updateCategory = useAppStore(s => s.updateCategory);
   const deleteCategory = useAppStore(s => s.deleteCategory);
-  const addWallet = useAppStore(s => s.addWallet); // Needed if we want to add wallets here too, though dashboard has it
   const renameWallet = useAppStore(s => s.renameWallet);
   const toggleWalletStatus = useAppStore(s => s.toggleWalletStatus);
   const updateSettings = useAppStore(s => s.updateSettings);
@@ -47,9 +46,11 @@ export function SettingsPage() {
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  // Threshold State
+  const [lowThreshold, setLowThreshold] = useState(settings.balanceThresholds?.low.toString() || '100');
+  const [mediumThreshold, setMediumThreshold] = useState(settings.balanceThresholds?.medium.toString() || '500');
   // --- Category Handlers ---
   const handleAddCategory = async () => {
-    // Validation
     const validation = CategorySchema.safeParse({ name: newCategoryName });
     if (!validation.success) {
       toast.error(validation.error.issues[0].message);
@@ -74,7 +75,6 @@ export function SettingsPage() {
   };
   const handleUpdateCategory = async () => {
     if (!editingCategory) return;
-    // Validation
     const validation = CategorySchema.safeParse({ name: editCategoryName });
     if (!validation.success) {
       toast.error(validation.error.issues[0].message);
@@ -111,7 +111,6 @@ export function SettingsPage() {
   };
   const handleRenameWallet = async () => {
     if (!editingWallet) return;
-    // Validation
     const validation = WalletSchema.pick({ name: true }).safeParse({ name: editWalletName });
     if (!validation.success) {
       toast.error(validation.error.issues[0].message);
@@ -130,16 +129,33 @@ export function SettingsPage() {
       setIsLoading(false);
     }
   };
+  // --- Threshold Handler ---
+  const handleUpdateThresholds = async () => {
+    const low = parseFloat(lowThreshold);
+    const medium = parseFloat(mediumThreshold);
+    if (isNaN(low) || isNaN(medium)) {
+      toast.error('الرجاء إدخال قيم ��حيحة');
+      return;
+    }
+    if (low >= medium) {
+      toast.error('الحد الأدنى يجب أن يكون أقل من المتوسط');
+      return;
+    }
+    await updateSettings({
+      balanceThresholds: { low, medium }
+    });
+    toast.success('تم تحديث إعدادات التنبيه');
+  };
   // --- Auth/System Handlers ---
   const handleLogout = () => {
-    if (confirm('هل تريد تسجيل الخروج؟')) {
+    if (confirm('هل تريد تس��يل الخروج؟')) {
       logout();
       navigate('/login');
     }
   };
   const handleBackup = async () => {
     if (!backupPassword) {
-      toast.error('الرجاء إدخال كلمة مرور للتشفي��');
+      toast.error('الرجاء إدخال كلمة مرور للتشفير');
       return;
     }
     setIsLoading(true);
@@ -151,7 +167,6 @@ export function SettingsPage() {
         lastUpdated: Date.now()
       };
       const encrypted = await encryptData(dataToBackup, backupPassword);
-      // Create download link
       const blob = new Blob([encrypted], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -161,12 +176,12 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير ال��سخة الاحتياطية بنجاح');
+      toast.success('تم تصدير النسخة الاحتياطي�� بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
       console.error(error);
-      toast.error('فشل إنشاء ��لنسخة الاحتياطية');
+      toast.error('فشل إنشاء النسخة الاحتياطية');
     } finally {
       setIsLoading(false);
     }
@@ -198,7 +213,7 @@ export function SettingsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">الإعدادات</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">تخصيص التطبيق والأم��ن</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">تخصيص التطبيق والأمان</p>
           </div>
         </div>
       </header>
@@ -216,10 +231,10 @@ export function SettingsPage() {
                 <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                   <span className="text-xs font-bold">$</span>
                 </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">عم��ة التطبيق</span>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">عملة التطبيق</span>
               </div>
-              <Select 
-                value={settings.currency} 
+              <Select
+                value={settings.currency}
                 onValueChange={(v: any) => updateSettings({ currency: v })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -234,6 +249,39 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </section>
+        {/* Threshold Settings */}
+        <section>
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <h2>تنبيهات ال��صيد</h2>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden p-4 space-y-4">
+            <p className="text-xs text-slate-500">حدد مستويات الرصيد لت��يير لون المحفظة تلقائياً.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-right text-xs text-red-500">حد الخطر (أحمر)</Label>
+                <Input
+                  type="number"
+                  value={lowThreshold}
+                  onChange={(e) => setLowThreshold(e.target.value)}
+                  className="text-center h-10 rounded-xl border-red-200 focus:border-red-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-right text-xs text-amber-500">حد التحذير (أصفر)</Label>
+                <Input
+                  type="number"
+                  value={mediumThreshold}
+                  onChange={(e) => setMediumThreshold(e.target.value)}
+                  className="text-center h-10 rounded-xl border-amber-200 focus:border-amber-500"
+                />
+              </div>
+            </div>
+            <Button onClick={handleUpdateThresholds} size="sm" variant="outline" className="w-full">
+              حفظ التنبيهات
+            </Button>
           </div>
         </section>
         {/* Security Section */}
@@ -251,8 +299,8 @@ export function SettingsPage() {
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">القفل التلقائي</span>
               </div>
-              <Select 
-                value={settings.autoLockMinutes.toString()} 
+              <Select
+                value={settings.autoLockMinutes.toString()}
                 onValueChange={(v) => updateSettings({ autoLockMinutes: parseInt(v) })}
               >
                 <SelectTrigger className="w-36 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" dir="rtl">
@@ -282,7 +330,7 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      قم بإنشاء مل�� نسخة احتياطية مشفر لحفظ بياناتك بأمان.
+                      قم بإنشاء ملف نسخة احتياطية مشفر لحفظ بياناتك ب��مان.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -319,12 +367,12 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      اختر ملف النسخة الاحتياطية وأدخل كلمة المرور لاسترجاع البيانات.
+                      اختر ملف النسخة الاحتياطية و��دخل كلمة المرور لاسترجاع البيانات.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
-                      تنبيه: استعادة البيانات ستقوم باستبدال جميع البيانات الحالية!
+                      تنبيه: استعادة البيانات ستقوم باستبدال ��ميع البيانات الحالية!
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
@@ -396,8 +444,8 @@ export function SettingsPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {categories.map((cat, index) => (
-              <div 
-                key={cat.id} 
+              <div
+                key={cat.id}
                 className={`flex items-center justify-between p-3 ${index !== categories.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
               >
                 <div className="flex items-center gap-3">
@@ -466,11 +514,11 @@ export function SettingsPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             {wallets.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-sm">لا ت��جد عُهد مسجلة</div>
+              <div className="p-6 text-center text-slate-400 text-sm">لا توجد عُهد مسجلة</div>
             ) : (
               wallets.map((wallet, index) => (
-                <div 
-                  key={wallet.id} 
+                <div
+                  key={wallet.id}
                   className={`flex items-center justify-between p-3 ${index !== wallets.length - 1 ? 'border-b border-slate-50 dark:border-slate-700' : ''}`}
                 >
                   <div className="flex items-center gap-3">
@@ -491,9 +539,9 @@ export function SettingsPage() {
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Switch 
-                      checked={wallet.isActive} 
-                      onCheckedChange={() => toggleWalletStatus(wallet.id)} 
+                    <Switch
+                      checked={wallet.isActive}
+                      onCheckedChange={() => toggleWalletStatus(wallet.id)}
                     />
                   </div>
                 </div>
@@ -534,18 +582,18 @@ export function SettingsPage() {
               <span className="text-sm font-bold">عن التطبيق</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
-              تطبيق Abu MaWaDa - الإصدار المحلي الآمن v2.0.0
+              تطبيق Abu MaWaDa - الإصدار المحلي الآمن v2.1.0
               <br />
               جميع البيانات محفوظة على جهازك فقط.
             </p>
           </div>
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             className="w-full gap-2 h-12 rounded-xl shadow-lg shadow-red-500/10"
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسجيل الخروج
+            تسجيل ال��روج
           </Button>
         </section>
       </div>

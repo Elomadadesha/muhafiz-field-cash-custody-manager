@@ -4,7 +4,7 @@ import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Copy, Receipt, TrendingUp } from 'lucide-react';
+import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Copy, Receipt, TrendingUp, Handshake, Target } from 'lucide-react';
 import { format, isToday, isYesterday, subDays, isSameDay } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { TransactionReceipt } from '@/components/transaction/TransactionReceipt';
+import { ReconciliationDialog } from '@/components/wallet/ReconciliationDialog';
 export function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -31,9 +32,9 @@ export function WalletDetailPage() {
   const deleteTransaction = useAppStore(s => s.deleteTransaction);
   const currency = CURRENCIES[settings.currency];
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'deposit'>('all');
-  // Receipt State
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isReconcileOpen, setIsReconcileOpen] = useState(false);
   // Filter transactions for this wallet and by type
   const filteredTransactions = useMemo(() => {
     if (!id) return [];
@@ -62,9 +63,9 @@ export function WalletDetailPage() {
     for (let i = 6; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dayExpenses = allTransactions
-        .filter(t => 
-          t.walletId === id && 
-          t.type === 'expense' && 
+        .filter(t =>
+          t.walletId === id &&
+          t.type === 'expense' &&
           isSameDay(new Date(t.date), date)
         )
         .reduce((acc, t) => acc + t.amount, 0);
@@ -82,7 +83,7 @@ export function WalletDetailPage() {
     return (
       <RtlWrapper className="justify-center items-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موجودة</h2>
+          <h2 className="text-xl font-bold text-slate-900">المحفظة غير مو��ودة</h2>
           <Button onClick={() => navigate('/dashboard')} className="mt-4">عودة للرئيسية</Button>
         </div>
       </RtlWrapper>
@@ -91,11 +92,12 @@ export function WalletDetailPage() {
   const getCategoryName = (tx: Transaction) => {
     if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
     if (tx.categoryId === 'transfer_sys') return 'تحويل أموال';
+    if (tx.categoryId === 'reconcile_sys') return 'تصفية عُهدة';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const handleDelete = async (txId: string) => {
-    if (confirm('هل أنت متأك�� من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
+    if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلق��ئياً.')) {
       await deleteTransaction(txId);
       toast.success('تم حذف العملية بنجاح');
     }
@@ -119,25 +121,49 @@ export function WalletDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{wallet.name}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليا��</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليات</p>
         </div>
-        <Button
-          size="sm"
-          onClick={() => openTransactionDrawer(wallet.id)}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
-        >
-          <Plus className="w-4 h-4 ml-1" />
-          عملية
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsReconcileOpen(true)}
+            className="rounded-full px-3 h-9 border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200"
+          >
+            <Handshake className="w-4 h-4 ml-1" />
+            تصفية
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => openTransactionDrawer(wallet.id)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 h-9"
+          >
+            <Plus className="w-4 h-4 ml-1" />
+            عملية
+          </Button>
+        </div>
       </header>
       {/* Balance Card */}
       <div className="px-6 mb-6">
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-slate-400 text-sm font-medium mb-1">الرصيد الحالي</p>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-4xl font-bold tabular-nums tracking-tight">{wallet.balance.toLocaleString()}</h2>
-              <span className="text-blue-300 font-medium text-lg">{currency.symbol}</span>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-slate-400 text-sm font-medium mb-1">الرصيد ال��الي</p>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-4xl font-bold tabular-nums tracking-tight">{wallet.balance.toLocaleString()}</h2>
+                  <span className="text-blue-300 font-medium text-lg">{currency.symbol}</span>
+                </div>
+              </div>
+              {wallet.budget && wallet.budget > 0 && (
+                <div className="text-left bg-white/10 p-2 rounded-xl backdrop-blur-sm border border-white/10">
+                  <div className="flex items-center gap-1 text-slate-300 text-[10px] mb-0.5">
+                    <Target className="w-3 h-3" />
+                    <span>الميزانية</span>
+                  </div>
+                  <p className="font-bold text-sm">{wallet.budget.toLocaleString()}</p>
+                </div>
+              )}
             </div>
           </div>
           {/* Decorative Elements */}
@@ -166,15 +192,15 @@ export function WalletDetailPage() {
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis 
-                  dataKey="shortName" 
-                  axisLine={false} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="shortName"
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fontSize: 10, fill: '#94a3b8' }}
                   dy={10}
                   interval="preserveStartEnd"
                 />
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
@@ -187,13 +213,13 @@ export function WalletDetailPage() {
                     return null;
                   }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stroke="#ef4444" 
-                  strokeWidth={2} 
-                  fillOpacity={1} 
-                  fill="url(#colorWalletExpense)" 
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorWalletExpense)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -206,34 +232,34 @@ export function WalletDetailPage() {
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">سجل العمليات</h3>
           {/* Filter Controls */}
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-            <button 
+            <button
               onClick={() => setFilterType('all')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
-                filterType === 'all' 
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" 
+                filterType === 'all'
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
               )}
             >
               الكل
             </button>
-            <button 
+            <button
               onClick={() => setFilterType('expense')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
-                filterType === 'expense' 
-                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm" 
+                filterType === 'expense'
+                  ? "bg-white dark:bg-slate-700 text-red-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
               )}
             >
               مصروفات
             </button>
-            <button 
+            <button
               onClick={() => setFilterType('deposit')}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
-                filterType === 'deposit' 
-                  ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm" 
+                filterType === 'deposit'
+                  ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
               )}
             >
@@ -263,8 +289,8 @@ export function WalletDetailPage() {
                     >
                       <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
-                        tx.type === 'expense' 
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-500" 
+                        tx.type === 'expense'
+                          ? "bg-red-50 dark:bg-red-900/20 text-red-500"
                           : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
                       )}>
                         {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
@@ -323,12 +349,18 @@ export function WalletDetailPage() {
         )}
       </div>
       {/* Receipt Dialog */}
-      <TransactionReceipt 
-        open={isReceiptOpen} 
-        onOpenChange={setIsReceiptOpen} 
+      <TransactionReceipt
+        open={isReceiptOpen}
+        onOpenChange={setIsReceiptOpen}
         transaction={selectedTxForReceipt}
         wallet={wallet}
         categoryName={selectedTxForReceipt ? getCategoryName(selectedTxForReceipt) : ''}
+      />
+      {/* Reconciliation Dialog */}
+      <ReconciliationDialog
+        open={isReconcileOpen}
+        onOpenChange={setIsReconcileOpen}
+        wallet={wallet}
       />
     </RtlWrapper>
   );

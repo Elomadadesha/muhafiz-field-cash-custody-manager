@@ -29,6 +29,7 @@ export function DashboardPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
+  const [newWalletBudget, setNewWalletBudget] = useState('');
   const navigate = useNavigate();
   const currency = CURRENCIES[settings.currency];
   const totalBalance = wallets.reduce((acc, w) => w.isActive ? acc + w.balance : acc, 0);
@@ -58,11 +59,13 @@ export function DashboardPage() {
   const handleAddWallet = async () => {
     if (!newWalletName) return;
     const balance = parseFloat(newWalletBalance) || 0;
-    await addWallet(newWalletName, balance);
+    const budget = parseFloat(newWalletBudget) || 0;
+    await addWallet(newWalletName, balance, budget);
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بنجاح');
+    setNewWalletBudget('');
+    toast.success('تم إضا��ة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
@@ -73,7 +76,7 @@ export function DashboardPage() {
           <Logo size="sm" />
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-              {getTimeBasedGreeting('مصطفى')}
+              {getTimeBasedGreeting('مصطف��')}
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
@@ -81,7 +84,7 @@ export function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setIsSearchOpen(true)}
             className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors"
           >
@@ -94,14 +97,14 @@ export function DashboardPage() {
         </div>
       </header>
       {/* Main Content */}
-      <motion.main 
+      <motion.main
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="flex-1 px-6 pb-24 overflow-y-auto space-y-8"
       >
         {/* Total Balance Card */}
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -151,7 +154,7 @@ export function DashboardPage() {
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">اتجاه الم��روفات</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">اتجاه المصروفات</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">آخر 7 أيام</p>
             </div>
           </div>
@@ -164,15 +167,15 @@ export function DashboardPage() {
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis 
-                  dataKey="shortName" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#94a3b8' }} 
+                <XAxis
+                  dataKey="shortName"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
                   dy={10}
                   interval="preserveStartEnd"
                 />
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
@@ -185,13 +188,13 @@ export function DashboardPage() {
                     return null;
                   }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stroke="#3b82f6" 
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#3b82f6"
                   strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorAmount)" 
+                  fillOpacity={1}
+                  fill="url(#colorAmount)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -201,7 +204,7 @@ export function DashboardPage() {
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 px-1">إجراءات سريعة</h3>
           <div className="grid grid-cols-2 gap-4">
-            <button 
+            <button
               onClick={() => openTransactionDrawer()}
               className="flex flex-col items-center justify-center gap-3 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-red-100 dark:hover:border-red-900/30 transition-all active:scale-95 group"
             >
@@ -213,7 +216,7 @@ export function DashboardPage() {
                 <span className="text-[10px] text-slate-400">خصم من عُهدة</span>
               </div>
             </button>
-            <button 
+            <button
               onClick={() => openTransactionDrawer()}
               className="flex flex-col items-center justify-center gap-3 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-100 dark:hover:border-blue-900/30 transition-all active:scale-95 group"
             >
@@ -268,6 +271,19 @@ export function DashboardPage() {
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{currency.symbol}</span>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-right block">سقف الميزانية (اختياري)</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={newWalletBudget}
+                        onChange={(e) => setNewWalletBudget(e.target.value)}
+                        className="text-right ltr-placeholder h-12 rounded-xl pr-12"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">{currency.symbol}</span>
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter className="sm:justify-start">
                   <Button onClick={handleAddWallet} className="bg-blue-600 hover:bg-blue-700 text-white w-full h-12 rounded-xl">
@@ -286,11 +302,10 @@ export function DashboardPage() {
           ) : wallets.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {wallets.map(wallet => (
-                <WalletCard 
-                  key={wallet.id} 
-                  wallet={wallet} 
+                <WalletCard
+                  key={wallet.id}
+                  wallet={wallet}
                   currencySymbol={currency.symbol}
-                  isLowBalance={wallet.balance < 500}
                   onClick={() => navigate(`/wallet/${wallet.id}`)}
                 />
               ))}
@@ -300,10 +315,10 @@ export function DashboardPage() {
               <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-slate-900 dark:text-white font-medium mb-1">لا توجد عُهد حا��ياً</h3>
+              <h3 className="text-slate-900 dark:text-white font-medium mb-1">لا توجد عُهد حالياً</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm">قم بإضافة عُهدة جديدة للبدء</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-4"
                 onClick={() => setIsAddOpen(true)}
               >

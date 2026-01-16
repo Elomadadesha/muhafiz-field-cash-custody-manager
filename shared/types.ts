@@ -26,6 +26,7 @@ export interface Wallet {
   balance: number;
   isActive: boolean;
   createdAt: number;
+  budget?: number; // Optional budget limit
 }
 export interface Transaction {
   id: string;
@@ -40,6 +41,8 @@ export interface Transaction {
   // Transfer Support
   relatedTransactionId?: string; // Links expense in Wallet A to deposit in Wallet B
   isTransfer?: boolean;
+  // Reconciliation Support
+  isReconciliation?: boolean;
 }
 export interface Category {
   id: string;
@@ -47,9 +50,28 @@ export interface Category {
   icon?: string;
   isSystem?: boolean; // Cannot be deleted if true
 }
+export interface Reconciliation {
+  id: string;
+  walletId: string;
+  date: number;
+  accountantName?: string;
+  balanceBefore: number;
+  balanceAfter: number;
+  notes?: string;
+}
+export interface AppSettings {
+  autoLockMinutes: number; // 0 = disabled
+  lastActive: number;
+  currency: 'SAR' | 'EGP' | 'USD';
+  balanceThresholds: {
+    low: number;
+    medium: number;
+  };
+}
 export interface AppData {
   wallets: Wallet[];
   transactions: Transaction[];
   categories: Category[];
+  reconciliations: Reconciliation[];
   lastUpdated: number;
 }

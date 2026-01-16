@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppData, Wallet, Transaction, Category } from '@/types/app';
+import { AppData, Wallet, Transaction, Category, Reconciliation } from '@/types/app';
 import { db, AppSettings } from '@/lib/db';
 import { hashPassword } from '@/lib/security';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +17,7 @@ interface AppState {
   wallets: Wallet[];
   transactions: Transaction[];
   categories: Category[];
+  reconciliations: Reconciliation[];
   settings: AppSettings;
   // UI State
   isTransactionDrawerOpen: boolean;
@@ -32,8 +33,9 @@ interface AppState {
   lockApp: () => void;
   unlockApp: (password: string) => Promise<boolean>;
   // Data Actions
-  addWallet: (name: string, initialBalance: number) => Promise<void>;
+  addWallet: (name: string, initialBalance: number, budget?: number) => Promise<void>;
   renameWallet: (id: string, newName: string) => Promise<void>;
+  updateWalletBudget: (id: string, budget: number) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
   // Transaction Actions
   openTransactionDrawer: (walletId?: string, transactionId?: string, mode?: DrawerMode) => void;
@@ -42,6 +44,7 @@ interface AppState {
   editTransaction: (id: string, data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   transferFunds: (fromWalletId: string, toWalletId: string, amount: number, date: number, notes?: string) => Promise<void>;
+  reconcileWallet: (walletId: string, accountantName: string, newBalance: number, notes?: string) => Promise<void>;
   // Category Actions
   addCategory: (name: string) => Promise<string | undefined>; // Returns the new ID
   updateCategory: (id: string, newName: string) => Promise<void>;
@@ -52,6 +55,15 @@ interface AppState {
   // Helpers
   getWallet: (id: string) => Wallet | undefined;
 }
+const DEFAULT_SETTINGS: AppSettings = {
+  autoLockMinutes: 5,
+  lastActive: Date.now(),
+  currency: 'EGP',
+  balanceThresholds: {
+    low: 100,
+    medium: 500
+  }
+};
 export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   isLocked: false,
@@ -63,7 +75,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   wallets: [],
   transactions: [],
   categories: [],
-  settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
+  reconciliations: [],
+  settings: DEFAULT_SETTINGS,
   isTransactionDrawerOpen: false,
   drawerMode: 'create',
   selectedWalletId: null,
@@ -84,25 +97,32 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentLockout = null;
         localStorage.removeItem('muhafiz_lockout');
       }
+      // Merge settings with defaults to ensure new fields exist
+      const mergedSettings = { ...DEFAULT_SETTINGS, ...settings };
+      // Ensure balanceThresholds exists if loading from old data
+      if (!mergedSettings.balanceThresholds) {
+        mergedSettings.balanceThresholds = DEFAULT_SETTINGS.balanceThresholds;
+      }
       set({
         isSetup,
         wallets: data.wallets || [],
         transactions: data.transactions || [],
         categories: data.categories || [],
-        settings: settings || { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' },
+        reconciliations: data.reconciliations || [],
+        settings: mergedSettings,
         lockoutUntil: currentLockout,
         isLoading: false
       });
     } catch (err) {
       console.error('Init failed:', err);
-      // Fallback to safe empty state to prevent app crash
       set({
         isLoading: false,
-        error: 'فشل تحميل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],
-        settings: { autoLockMinutes: 5, lastActive: Date.now(), currency: 'EGP' }
+        reconciliations: [],
+        settings: DEFAULT_SETTINGS
       });
     }
   },
@@ -171,7 +191,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   unlockApp: async (password: string) => {
     return get().login(password);
   },
-  addWallet: async (name: string, initialBalance: number) => {
+  addWallet: async (name: string, initialBalance: number, budget?: number) => {
     set({ isLoading: true });
     try {
       const newWallet: Wallet = {
@@ -180,16 +200,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         balance: initialBalance,
         isActive: true,
         createdAt: Date.now(),
+        budget
       };
       const state = get();
       const newWallets = [...state.wallets, newWallet];
-      // Update local state
       set({ wallets: newWallets });
-      // Persist
       await db.saveData({
         wallets: newWallets,
         transactions: state.transactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
       set({ isLoading: false });
@@ -209,11 +229,32 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: updatedWallets,
         transactions: state.transactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
       set({ isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: 'فشل تعديل اسم المحفظة' });
+    }
+  },
+  updateWalletBudget: async (id: string, budget: number) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const updatedWallets = state.wallets.map(w =>
+        w.id === id ? { ...w, budget } : w
+      );
+      set({ wallets: updatedWallets });
+      await db.saveData({
+        wallets: updatedWallets,
+        transactions: state.transactions,
+        categories: state.categories,
+        reconciliations: state.reconciliations,
+        lastUpdated: Date.now()
+      });
+      set({ isLoading: false });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تحديث الميزانية' });
     }
   },
   toggleWalletStatus: async (id: string) => {
@@ -226,12 +267,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       wallets: updatedWallets,
       transactions: state.transactions,
       categories: state.categories,
+      reconciliations: state.reconciliations,
       lastUpdated: Date.now()
     });
   },
   openTransactionDrawer: (walletId, transactionId, mode) => {
     let determinedMode: DrawerMode = mode || 'create';
-    // Auto-detect mode if not explicitly provided
     if (!mode) {
       if (transactionId) determinedMode = 'edit';
       else determinedMode = 'create';
@@ -260,7 +301,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...data
       };
       const state = get();
-      // Update wallet balance
       const updatedWallets = state.wallets.map(w => {
         if (w.id === data.walletId) {
           const newBalance = data.type === 'expense'
@@ -282,6 +322,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: updatedWallets,
         transactions: newTransactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
     } catch (err) {
@@ -296,25 +337,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!oldTx) {
         throw new Error("Transaction not found");
       }
-      // 1. Revert old transaction effect
       let wallets = [...state.wallets];
       const oldWalletIndex = wallets.findIndex(w => w.id === oldTx.walletId);
       if (oldWalletIndex !== -1) {
         const w = wallets[oldWalletIndex];
-        // If expense, add back. If deposit, subtract.
         const revertAmount = oldTx.type === 'expense' ? oldTx.amount : -oldTx.amount;
         wallets[oldWalletIndex] = { ...w, balance: w.balance + revertAmount };
       }
-      // 2. Apply new transaction effect
-      // Note: If walletId changed, we apply to new wallet. If same, we apply to the already modified wallet.
       const newWalletIndex = wallets.findIndex(w => w.id === data.walletId);
       if (newWalletIndex !== -1) {
         const w = wallets[newWalletIndex];
-        // If expense, subtract. If deposit, add.
         const applyAmount = data.type === 'expense' ? -data.amount : data.amount;
         wallets[newWalletIndex] = { ...w, balance: w.balance + applyAmount };
       }
-      // 3. Update transaction record
       const updatedTx: Transaction = {
         ...oldTx,
         ...data
@@ -332,6 +367,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets,
         transactions: updatedTransactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
     } catch (err) {
@@ -346,14 +382,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!tx) {
         throw new Error("Transaction not found");
       }
-      // Identify all transactions to delete (including related transfer)
       const idsToDelete = [id];
       if (tx.relatedTransactionId) {
         idsToDelete.push(tx.relatedTransactionId);
       }
-      // 1. Revert transaction effects on wallets
       let wallets = [...state.wallets];
-      // We need to process each transaction to delete to revert its effect
       idsToDelete.forEach(deleteId => {
         const t = state.transactions.find(tr => tr.id === deleteId);
         if (t) {
@@ -365,7 +398,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         }
       });
-      // 2. Remove transactions
       const updatedTransactions = state.transactions.filter(t => !idsToDelete.includes(t.id));
       set({
         wallets,
@@ -376,6 +408,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets,
         transactions: updatedTransactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
     } catch (err) {
@@ -393,7 +426,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const fromTxId = uuidv4();
       const toTxId = uuidv4();
       const now = Date.now();
-      // 1. Create Expense (Source)
       const expenseTx: Transaction = {
         id: fromTxId,
         walletId: fromWalletId,
@@ -406,7 +438,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         notes,
         createdAt: now
       };
-      // 2. Create Deposit (Target)
       const depositTx: Transaction = {
         id: toTxId,
         walletId: toWalletId,
@@ -419,13 +450,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         notes,
         createdAt: now
       };
-      // 3. Update Wallets
       const updatedWallets = state.wallets.map(w => {
         if (w.id === fromWalletId) return { ...w, balance: w.balance - amount };
         if (w.id === toWalletId) return { ...w, balance: w.balance + amount };
         return w;
       });
-      // 4. Update Transactions
       const newTransactions = [expenseTx, depositTx, ...state.transactions];
       set({
         wallets: updatedWallets,
@@ -437,10 +466,71 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: updatedWallets,
         transactions: newTransactions,
         categories: state.categories,
+        reconciliations: state.reconciliations,
         lastUpdated: now
       });
     } catch (err) {
       set({ isLoading: false, error: 'فشل تحويل الأموال' });
+      throw err;
+    }
+  },
+  reconcileWallet: async (walletId, accountantName, newBalance, notes) => {
+    set({ isLoading: true });
+    try {
+      const state = get();
+      const wallet = state.wallets.find(w => w.id === walletId);
+      if (!wallet) throw new Error("Wallet not found");
+      const currentBalance = wallet.balance;
+      const diff = newBalance - currentBalance;
+      const now = Date.now();
+      // Create Reconciliation Record
+      const reconciliation: Reconciliation = {
+        id: uuidv4(),
+        walletId,
+        date: now,
+        accountantName,
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
+        notes
+      };
+      // Create Adjustment Transaction if there is a difference
+      let adjustmentTx: Transaction | null = null;
+      if (diff !== 0) {
+        adjustmentTx = {
+          id: uuidv4(),
+          walletId,
+          amount: Math.abs(diff),
+          type: diff < 0 ? 'expense' : 'deposit',
+          categoryId: 'reconcile_sys', // We'll handle this category display in UI
+          customCategoryName: 'تصفية عُهدة',
+          date: now,
+          notes: `تصفية مع المحاسب: ${accountantName || 'غير محدد'}`,
+          createdAt: now,
+          isReconciliation: true
+        };
+      }
+      // Update Wallet
+      const updatedWallets = state.wallets.map(w =>
+        w.id === walletId ? { ...w, balance: newBalance } : w
+      );
+      // Update Transactions & Reconciliations
+      const newTransactions = adjustmentTx ? [adjustmentTx, ...state.transactions] : state.transactions;
+      const newReconciliations = [reconciliation, ...state.reconciliations];
+      set({
+        wallets: updatedWallets,
+        transactions: newTransactions,
+        reconciliations: newReconciliations,
+        isLoading: false
+      });
+      await db.saveData({
+        wallets: updatedWallets,
+        transactions: newTransactions,
+        categories: state.categories,
+        reconciliations: newReconciliations,
+        lastUpdated: now
+      });
+    } catch (err) {
+      set({ isLoading: false, error: 'فشل تصفية العُهدة' });
       throw err;
     }
   },
@@ -460,6 +550,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: state.wallets,
         transactions: state.transactions,
         categories: newCategories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
       return id;
@@ -480,6 +571,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: state.wallets,
         transactions: state.transactions,
         categories: updatedCategories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
     } catch (err) {
@@ -500,6 +592,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: state.wallets,
         transactions: state.transactions,
         categories: newCategories,
+        reconciliations: state.reconciliations,
         lastUpdated: Date.now()
       });
     } catch (err) {
@@ -515,7 +608,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   restoreData: async (data: AppData) => {
     set({ isLoading: true });
     try {
-      // Validate data structure roughly
       if (!Array.isArray(data.wallets) || !Array.isArray(data.transactions)) {
         throw new Error("Invalid data format");
       }
@@ -523,6 +615,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: data.wallets,
         transactions: data.transactions,
         categories: data.categories,
+        reconciliations: data.reconciliations || [],
         isLoading: false
       });
       await db.saveData(data);
