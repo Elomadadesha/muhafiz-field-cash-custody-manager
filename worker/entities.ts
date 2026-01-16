@@ -1,45 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { AppData } from "@shared/types"; // We will define AppData in shared/types or just inline here if shared is not accessible easily in this phase context, but template has shared/types.ts.
-// However, I defined AppData in src/types/app.ts. The worker cannot import from src.
-// I must define the types here or in shared/types.ts.
-// I will update shared/types.ts first to ensure types are available to both.
-// Let's redefine the types here for the worker to be self-contained or use shared if possible.
-// The template has shared/types.ts. I should update that file first?
-// The prompt didn't ask to update shared/types.ts, but it's better practice.
-// However, I am restricted to the file list.
-// I will define the types inside entities.ts to be safe and avoid modifying files not in the list if possible, 
-// BUT I can modify shared/types.ts if I want to share types.
-// The prompt list didn't include shared/types.ts.
-// I will define the interface locally in entities.ts to avoid breaking rules.
-export interface Wallet {
-  id: string;
-  name: string;
-  balance: number;
-  isActive: boolean;
-  createdAt: number;
-}
-export interface Transaction {
-  id: string;
-  walletId: string;
-  amount: number;
-  type: 'expense' | 'deposit';
-  categoryId: string;
-  date: number;
-  notes?: string;
-  createdAt: number;
-}
-export interface Category {
-  id: string;
-  name: string;
-  icon?: string;
-  isSystem?: boolean;
-}
-export interface AppData {
-  wallets: Wallet[];
-  transactions: Transaction[];
-  categories: Category[];
-  lastUpdated: number;
-}
+import type { AppData, Wallet, Transaction } from "@shared/types";
 export interface UserEntityState {
   id: string;
   data: AppData;
@@ -54,9 +14,9 @@ const INITIAL_APP_DATA: AppData = {
 export class UserEntity extends IndexedEntity<UserEntityState> {
   static readonly entityName = "user";
   static readonly indexName = "users";
-  static readonly initialState: UserEntityState = { 
-    id: "", 
-    data: INITIAL_APP_DATA 
+  static readonly initialState: UserEntityState = {
+    id: "",
+    data: INITIAL_APP_DATA
   };
   // No seed data needed for this app
   static seedData = [];
@@ -91,6 +51,42 @@ export class UserEntity extends IndexedEntity<UserEntityState> {
         lastUpdated: Date.now()
       }
     }));
+    return (await this.getState()).data;
+  }
+  async addTransaction(transaction: Transaction): Promise<AppData> {
+    await this.mutate(state => {
+      const { walletId, amount, type } = transaction;
+      const walletIndex = state.data.wallets.findIndex(w => w.id === walletId);
+      if (walletIndex === -1) {
+        // If wallet not found, we can't process. 
+        // In a real app, we might throw, but here we'll just return state unchanged or log.
+        // Throwing ensures the API returns an error.
+        throw new Error("Wallet not found");
+      }
+      const wallet = state.data.wallets[walletIndex];
+      let newBalance = wallet.balance;
+      // Calculate new balance
+      if (type === 'expense') {
+        newBalance -= amount;
+      } else {
+        newBalance += amount;
+      }
+      // Update wallet
+      const updatedWallet = { ...wallet, balance: newBalance };
+      const updatedWallets = [...state.data.wallets];
+      updatedWallets[walletIndex] = updatedWallet;
+      // Prepend transaction
+      const updatedTransactions = [transaction, ...state.data.transactions];
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          wallets: updatedWallets,
+          transactions: updatedTransactions,
+          lastUpdated: Date.now()
+        }
+      };
+    });
     return (await this.getState()).data;
   }
 }

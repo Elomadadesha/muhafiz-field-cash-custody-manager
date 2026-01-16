@@ -9,18 +9,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 export function DashboardPage() {
   const wallets = useAppStore(s => s.wallets);
   const sync = useAppStore(s => s.sync);
   const addWallet = useAppStore(s => s.addWallet);
   const isLoading = useAppStore(s => s.isLoading);
+  const transactions = useAppStore(s => s.transactions);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
   const [newWalletBalance, setNewWalletBalance] = useState('');
+  const navigate = useNavigate();
   useEffect(() => {
     sync();
-  }, []);
+  }, [sync]);
   const totalBalance = wallets.reduce((acc, w) => w.isActive ? acc + w.balance : acc, 0);
+  // Calculate today's expenses
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayExpenses = transactions
+    .filter(t => t.type === 'expense' && t.date >= today.getTime())
+    .reduce((acc, t) => acc + t.amount, 0);
   const handleAddWallet = async () => {
     if (!newWalletName) return;
     const balance = parseFloat(newWalletBalance) || 0;
@@ -60,10 +69,10 @@ export function DashboardPage() {
             <div className="mt-6 flex gap-3">
               <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10">
                 <p className="text-xs text-slate-400 mb-1">المصروفات (اليوم)</p>
-                <p className="text-lg font-semibold tabular-nums">0</p>
+                <p className="text-lg font-semibold tabular-nums">{todayExpenses.toLocaleString('en-US')}</p>
               </div>
               <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                <p className="text-xs text-slate-400 mb-1">عدد العُهد النشط��</p>
+                <p className="text-xs text-slate-400 mb-1">عدد العُهد النشطة</p>
                 <p className="text-lg font-semibold tabular-nums">{wallets.filter(w => w.isActive).length}</p>
               </div>
             </div>
@@ -77,7 +86,7 @@ export function DashboardPage() {
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1">
                   <Plus className="w-4 h-4" />
-                  <span>إضافة عُهدة</span>
+                  <span>إضافة ��ُهدة</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md" dir="rtl">
@@ -87,8 +96,8 @@ export function DashboardPage() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label className="text-right block">اسم العُهدة</Label>
-                    <Input 
-                      placeholder="مثال: عُهدة وقود" 
+                    <Input
+                      placeholder="مثال: عُهدة وقود"
                       value={newWalletName}
                       onChange={(e) => setNewWalletName(e.target.value)}
                       className="text-right"
@@ -96,9 +105,9 @@ export function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-right block">الرصيد الافتتاحي</Label>
-                    <Input 
-                      type="number" 
-                      placeholder="0.00" 
+                    <Input
+                      type="number"
+                      placeholder="0.00"
                       value={newWalletBalance}
                       onChange={(e) => setNewWalletBalance(e.target.value)}
                       className="text-right ltr-placeholder"
@@ -122,7 +131,11 @@ export function DashboardPage() {
           ) : wallets.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {wallets.map(wallet => (
-                <WalletCard key={wallet.id} wallet={wallet} />
+                <WalletCard 
+                  key={wallet.id} 
+                  wallet={wallet} 
+                  onClick={() => navigate(`/wallet/${wallet.id}`)}
+                />
               ))}
             </div>
           ) : (

@@ -12,10 +12,19 @@ interface AppState {
   categories: Category[];
   isLoading: boolean;
   error: string | null;
+  // UI State
+  isTransactionDrawerOpen: boolean;
+  selectedWalletId: string | null;
   // Actions
   sync: () => Promise<void>;
   addWallet: (name: string, initialBalance: number) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
+  // Transaction Actions
+  openTransactionDrawer: (walletId?: string) => void;
+  closeTransactionDrawer: () => void;
+  addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+  // Helpers
+  getWallet: (id: string) => Wallet | undefined;
 }
 // Initial Mock Data for first load or offline fallback
 const INITIAL_CATEGORIES: Category[] = [
@@ -33,6 +42,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   categories: INITIAL_CATEGORIES,
   isLoading: false,
   error: null,
+  isTransactionDrawerOpen: false,
+  selectedWalletId: null,
   login: async (password: string) => {
     // Simple mock auth for Phase 1
     // In a real app, verify against backend hash
@@ -61,9 +72,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       console.error('Sync failed:', err);
-      set({ 
-        error: err instanceof Error ? err.message : 'فشل الاتصال بالخادم', 
-        isLoading: false 
+      set({
+        error: err instanceof Error ? err.message : 'فشل الاتصال بالخادم',
+        isLoading: false
       });
     }
   },
@@ -89,7 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error('Add wallet failed:', err);
       // Revert on failure would go here in a robust app
-      set({ isLoading: false, error: 'فشل إضافة الم��فظة' });
+      set({ isLoading: false, error: 'فشل إضافة المحفظة' });
     }
   },
   toggleWalletStatus: async (id: string) => {
@@ -112,5 +123,43 @@ export const useAppStore = create<AppState>((set, get) => ({
         wallets: state.wallets.map(w => w.id === id ? wallet : w)
       }));
     }
+  },
+  openTransactionDrawer: (walletId) => {
+    set({ isTransactionDrawerOpen: true, selectedWalletId: walletId || null });
+  },
+  closeTransactionDrawer: () => {
+    set({ isTransactionDrawerOpen: false, selectedWalletId: null });
+  },
+  addTransaction: async (data) => {
+    set({ isLoading: true });
+    try {
+      const newTx: Transaction = {
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+        ...data
+      };
+      // Optimistic update logic is complex due to balance updates.
+      // For safety, we'll rely on the server response which returns the full updated AppData.
+      // But to make UI snappy, we can try to append locally first if we want.
+      // Let's stick to server response for data integrity in this phase.
+      const updatedData = await api<AppData>('/api/transaction', {
+        method: 'POST',
+        body: JSON.stringify(newTx)
+      });
+      set({
+        wallets: updatedData.wallets,
+        transactions: updatedData.transactions,
+        isLoading: false,
+        isTransactionDrawerOpen: false, // Close drawer on success
+        selectedWalletId: null
+      });
+    } catch (err) {
+      console.error('Add transaction failed:', err);
+      set({ isLoading: false, error: 'فشل إضافة العملية' });
+      throw err; // Re-throw to let UI handle specific error feedback if needed
+    }
+  },
+  getWallet: (id) => {
+    return get().wallets.find(w => w.id === id);
   }
 }));

@@ -1,15 +1,22 @@
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { WalletDetailPage } from '@/pages/WalletDetailPage';
 import { useAppStore } from '@/lib/store';
 import { Toaster } from 'sonner';
+import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
 // Auth Guard
 function ProtectedRoute() {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <TransactionDrawer />
+    </>
+  );
 }
 // Public Route (redirect if already logged in)
 function PublicRoute() {
@@ -40,10 +47,14 @@ const router = createBrowserRouter([
         path: '/dashboard',
         element: <DashboardPage />,
       },
+      {
+        path: '/wallet/:id',
+        element: <WalletDetailPage />,
+      },
       // Placeholders for future routes
       {
         path: '/reports',
-        element: <div className="p-8 text-center">صف��ة التقارير (قريباً)</div>,
+        element: <div className="p-8 text-center">صفحة التقارير (قريباً)</div>,
       },
       {
         path: '/settings',

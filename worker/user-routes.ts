@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity } from "./entities";
 import { ok, bad } from './core-utils';
+import type { Transaction } from "@shared/types";
 // Hardcoded ID for the single user application
 const MAIN_USER_ID = "muhafiz-main-user";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -29,6 +30,20 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       updatedData = await entity.addWallet(wallet);
     }
     return ok(c, updatedData);
+  });
+  // TRANSACTION: Add new transaction
+  app.post('/api/transaction', async (c) => {
+    const transaction = await c.req.json<Transaction>();
+    if (!transaction || !transaction.id || !transaction.walletId || !transaction.amount) {
+      return bad(c, 'Invalid transaction data');
+    }
+    const entity = new UserEntity(c.env, MAIN_USER_ID);
+    try {
+      const updatedData = await entity.addTransaction(transaction);
+      return ok(c, updatedData);
+    } catch (e: any) {
+      return bad(c, e.message || 'Failed to add transaction');
+    }
   });
   // Keep health check or other utilities if needed
   app.get('/api/test', (c) => c.json({ success: true, message: 'Muhafiz API Ready' }));
