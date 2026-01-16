@@ -1,10 +1,11 @@
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Plus, Calendar as CalendarIcon, ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -26,6 +27,17 @@ export function WalletDetailPage() {
   const openTransactionDrawer = useAppStore(s => s.openTransactionDrawer);
   const deleteTransaction = useAppStore(s => s.deleteTransaction);
   const currency = CURRENCIES[settings.currency];
+  // Group transactions by date
+  const groupedTransactions = useMemo(() => {
+    const groups: Record<string, Transaction[]> = {};
+    transactions.forEach(tx => {
+      const dateKey = format(tx.date, 'yyyy-MM-dd');
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(tx);
+    });
+    return groups;
+  }, [transactions]);
+  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   if (!wallet) {
     return (
       <RtlWrapper className="justify-center items-center">
@@ -37,15 +49,21 @@ export function WalletDetailPage() {
     );
   }
   const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
+    if (tx.categoryId === 'deposit_sys') return '��غذية رصيد';
     if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const handleDelete = async (txId: string) => {
     if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقائياً.')) {
       await deleteTransaction(txId);
-      toast.success('تم ��ذف العملية بنجاح');
+      toast.success('تم حذف العملية بنجاح');
     }
+  };
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isToday(date)) return 'اليوم';
+    if (isYesterday(date)) return 'أمس';
+    return format(date, 'EEEE، d MMMM', { locale: arSA });
   };
   return (
     <RtlWrapper>
@@ -56,10 +74,10 @@ export function WalletDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{wallet.name}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العمليات</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">تفاصيل العملي��ت</p>
         </div>
-        <Button
-          size="sm"
+        <Button 
+          size="sm" 
           onClick={() => openTransactionDrawer(wallet.id)}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4"
         >
@@ -87,63 +105,72 @@ export function WalletDetailPage() {
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">سجل العمليات</h3>
         {transactions.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
-            <p className="text-slate-400 text-sm">لا توجد عمليات مسجلة لهذه المحفظة</p>
+            <p className="text-slate-400 text-sm">لا توجد عمليات مسجلة ل��ذه المحفظة</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {transactions.map((tx, index) => (
-              <motion.div
-                key={tx.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-start gap-4 group p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative"
-              >
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
-                  tx.type === 'expense'
-                    ? "bg-red-50 dark:bg-red-900/20 text-red-500"
-                    : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
-                )}>
-                  {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
+          <div className="space-y-6">
+            {sortedDates.map((dateKey) => (
+              <div key={dateKey}>
+                <h4 className="text-xs font-bold text-slate-400 mb-3 sticky top-0 bg-white dark:bg-slate-900 py-2 z-10">
+                  {getDateLabel(dateKey)}
+                </h4>
+                <div className="space-y-4">
+                  {groupedTransactions[dateKey].map((tx, index) => (
+                    <motion.div
+                      key={tx.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-start gap-4 group p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative"
+                    >
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors shadow-sm",
+                        tx.type === 'expense' 
+                          ? "bg-red-50 dark:bg-red-900/20 text-red-500" 
+                          : "bg-blue-50 dark:bg-blue-900/20 text-blue-500"
+                      )}>
+                        {tx.type === 'expense' ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownLeft className="w-6 h-6" />}
+                      </div>
+                      <div className="flex-1 min-w-0 py-1">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="font-bold text-slate-900 dark:text-white truncate">{getCategoryName(tx)}</h4>
+                          <span className={cn(
+                            "font-bold tabular-nums whitespace-nowrap",
+                            tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
+                          )}>
+                            {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-slate-400">
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            <span>{format(tx.date, "h:mm a", { locale: arSA })}</span>
+                          </div>
+                          {tx.notes && <span className="truncate max-w-[100px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{tx.notes}</span>}
+                        </div>
+                      </div>
+                      {/* Actions Menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="text-right">
+                          <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id)} className="gap-2 cursor-pointer flex-row-reverse">
+                            <Pencil className="w-4 h-4" />
+                            <span>تعديل</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="gap-2 text-red-600 focus:text-red-600 cursor-pointer flex-row-reverse">
+                            <Trash2 className="w-4 h-4" />
+                            <span>حذف</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </motion.div>
+                  ))}
                 </div>
-                <div className="flex-1 min-w-0 py-1">
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-bold text-slate-900 dark:text-white truncate">{getCategoryName(tx)}</h4>
-                    <span className={cn(
-                      "font-bold tabular-nums whitespace-nowrap",
-                      tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
-                    )}>
-                      {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <CalendarIcon className="w-3 h-3" />
-                      <span>{format(tx.date, "d MMM, h:mm a", { locale: arSA })}</span>
-                    </div>
-                    {tx.notes && <span className="truncate max-w-[100px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{tx.notes}</span>}
-                  </div>
-                </div>
-                {/* Actions Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" dir="rtl">
-                    <DropdownMenuItem onClick={() => openTransactionDrawer(tx.walletId, tx.id)} className="gap-2 cursor-pointer">
-                      <Pencil className="w-4 h-4" />
-                      <span>تعديل</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="gap-2 text-red-600 focus:text-red-600 cursor-pointer">
-                      <Trash2 className="w-4 h-4" />
-                      <span>حذف</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

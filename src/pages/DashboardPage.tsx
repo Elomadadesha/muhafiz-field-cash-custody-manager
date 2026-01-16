@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { SearchDialog } from '@/components/search/SearchDialog';
+import { getTimeBasedGreeting } from '@/lib/utils';
 export function DashboardPage() {
   const wallets = useAppStore(s => s.wallets);
   const addWallet = useAppStore(s => s.addWallet);
@@ -43,7 +44,7 @@ export function DashboardPage() {
     setIsAddOpen(false);
     setNewWalletName('');
     setNewWalletBalance('');
-    toast.success('تم إضافة المحفظة بنجاح');
+    toast.success('تم إضافة الم��فظة بنجاح');
   };
   return (
     <RtlWrapper>
@@ -53,7 +54,9 @@ export function DashboardPage() {
         <div className="flex items-center gap-3">
           <Logo size="sm" />
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">مرحبا مصطفى</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+              {getTimeBasedGreeting('مصطفى')}
+            </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}
             </p>
@@ -73,14 +76,19 @@ export function DashboardPage() {
         </div>
       </header>
       {/* Main Content */}
-      <motion.main
+      <motion.main 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="flex-1 px-6 pb-24 overflow-y-auto space-y-8"
       >
         {/* Total Balance Card - Glassmorphism Redesign */}
-        <div className="relative overflow-hidden rounded-[2rem] bg-blue-600 p-6 text-white shadow-xl shadow-blue-600/20 group">
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative overflow-hidden rounded-[2rem] bg-blue-600 p-6 text-white shadow-xl shadow-blue-600/20 group"
+        >
           {/* Advanced Gradients */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/40 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
@@ -88,7 +96,7 @@ export function DashboardPage() {
           <div className="relative z-10">
             <p className="text-blue-100 text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]"></span>
-              إجمال�� الرصيد الحالي
+              إجمالي الرصيد الحالي
             </p>
             <div className="flex items-baseline gap-2 mb-8">
               <h2 className="text-5xl font-bold tracking-tight tabular-nums drop-shadow-sm">
@@ -117,12 +125,12 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
         {/* Quick Actions */}
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 px-1">إجراءات سريعة</h3>
           <div className="grid grid-cols-2 gap-4">
-            <button
+            <button 
               onClick={() => openTransactionDrawer()}
               className="flex flex-col items-center justify-center gap-3 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-red-100 dark:hover:border-red-900/30 transition-all active:scale-95 group"
             >
@@ -134,7 +142,7 @@ export function DashboardPage() {
                 <span className="text-[10px] text-slate-400">خصم من عُهدة</span>
               </div>
             </button>
-            <button
+            <button 
               onClick={() => openTransactionDrawer()}
               className="flex flex-col items-center justify-center gap-3 p-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-100 dark:hover:border-blue-900/30 transition-all active:scale-95 group"
             >
@@ -207,9 +215,9 @@ export function DashboardPage() {
           ) : wallets.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {wallets.map(wallet => (
-                <WalletCard
-                  key={wallet.id}
-                  wallet={wallet}
+                <WalletCard 
+                  key={wallet.id} 
+                  wallet={wallet} 
                   currencySymbol={currency.symbol}
                   onClick={() => navigate(`/wallet/${wallet.id}`)}
                 />
