@@ -6,8 +6,8 @@ interface RtlWrapperProps {
 }
 export function RtlWrapper({ children, className }: RtlWrapperProps) {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans" dir="rtl">
-      <div className={cn("max-w-md mx-auto min-h-screen bg-white dark:bg-slate-900 shadow-2xl overflow-hidden relative flex flex-col", className)}>
+    <div className="min-h-screen bg-[#070d1d] font-sans" dir="rtl">
+      <div className={cn("max-w-md mx-auto min-h-screen bg-[#0d162b] shadow-2xl overflow-hidden relative flex flex-col", className)}>
         {children}
       </div>
     </div>

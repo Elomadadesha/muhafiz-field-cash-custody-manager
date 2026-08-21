@@ -1,61 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
-    /* Core Colors - Blue & Slate Theme */
-    --background: 210 40% 98%; /* Slate 50 */
-    --foreground: 222 47% 11%; /* Slate 900 */
-    /* Primary Blue 600 */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%; /* Slate 50 */
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215 16% 47%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    /* Accent Blue 50 */
-    --accent: 214.3 94.6% 92%;
-    --accent-foreground: 221.2 83.2% 53.3%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --background: 225 45% 8%;
+    --foreground: 210 40% 96%;
+    --primary: 221 83% 55%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 217 31% 18%;
+    --muted-foreground: 215 20% 68%;
+    --card: 218 31% 17%;
+    --card-foreground: 210 40% 96%;
+    --popover: 224 42% 11%;
+    --popover-foreground: 210 40% 96%;
+    --border: 216 28% 25%;
+    --input: 216 28% 25%;
+    --accent: 221 70% 22%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 221 83% 60%;
+    --radius: 1.25rem;
+    --success: 161 100% 39%;
+    --warning: 38 100% 50%;
   }
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    /* Primary Blue 500 for Dark Mode */
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222 47% 11%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 217.2 91.2% 59.8%;
-  }
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Cairo', sans-serif;
-  }
+  * { @apply border-border; }
+  html, body, #root { min-height: 100%; background: hsl(var(--background)); }
+  body { @apply bg-background text-foreground antialiased; font-family: 'Cairo', sans-serif; direction: rtl; }
+  button, input, textarea, select { font-family: inherit; }
 }
-@layer utilities {
-  .rtl-grid {
-    direction: rtl;
-  }
+
+@layer components {
+  .glass-card { @apply rounded-3xl border border-white/10 bg-card/90 shadow-xl; box-shadow: 0 14px 36px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04); }
+  .gradient-primary { background: linear-gradient(135deg, #2563eb 0%, #3478f6 52%, #2563eb 100%); }
+  .bottom-nav { background: rgba(13, 22, 43, .97); border-top: 1px solid rgba(148,163,184,.12); }
+  .glow-primary { box-shadow: 0 0 28px rgba(37,99,235,.38); }
 }
+
+@layer utilities { .rtl-grid { direction: rtl; } .text-success { color: hsl(var(--success)); } .text-warning { color: hsl(var(--warning)); } }

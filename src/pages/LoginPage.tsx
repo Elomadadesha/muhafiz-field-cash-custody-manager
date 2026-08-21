@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Lock, KeyRound, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Lock, KeyRound, AlertTriangle, Smartphone, Zap, ShieldCheck } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { Button } from '@/components/ui/button';
@@ -110,6 +110,11 @@ export function LoginPage() {
                 : 'إعداد كلمة المرور الجديدة'}
             </p>
           </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-2xl border border-white/10 bg-[#18243a] p-3 text-xs text-slate-300"><ShieldCheck className="mx-auto mb-2 h-6 w-6 text-blue-400" /><span>آمن ومشفر</span></div>
+          <div className="rounded-2xl border border-white/10 bg-[#18243a] p-3 text-xs text-slate-300"><Zap className="mx-auto mb-2 h-6 w-6 text-orange-400" /><span>سريع جداً</span></div>
+          <div className="rounded-2xl border border-white/10 bg-[#18243a] p-3 text-xs text-slate-300"><Smartphone className="mx-auto mb-2 h-6 w-6 text-emerald-400" /><span>يعمل دون نت</span></div>
         </div>
         {lockoutTimer > 0 ? (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center space-y-2 animate-pulse">
