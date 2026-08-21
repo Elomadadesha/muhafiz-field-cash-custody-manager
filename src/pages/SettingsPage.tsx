@@ -47,6 +47,7 @@ export function SettingsPage() {
   // Backup/Restore State
   const [backupPassword, setBackupPassword] = useState('');
   const [isBackupOpen, setIsBackupOpen] = useState(false);
+  const [backupAction, setBackupAction] = useState<'download' | 'share'>('download');
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   // Threshold State
@@ -341,7 +342,7 @@ export function SettingsPage() {
               {/* Backup Dialog */}
               <Dialog open={isBackupOpen} onOpenChange={setIsBackupOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <Button onClick={() => setBackupAction('download')} variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
                     <Download className="w-4 h-4 text-blue-600" />
                     نسخ احتياطي
                   </Button>
@@ -369,13 +370,13 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
-                      {isLoading ? 'جاري التدير...' : 'تصدير وحفظ'}
+                    <Button onClick={backupAction === 'share' ? handleShareBackup : handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
+                      {isLoading ? 'جاري التنفيذ...' : backupAction === 'share' ? 'مشاركة النسخة' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button onClick={() => setIsBackupOpen(true)} variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Button onClick={() => { setBackupAction('share'); setIsBackupOpen(true); }} variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
                 <Share2 className="w-4 h-4 text-emerald-600" />
                 مشاركة النسخة
               </Button>
