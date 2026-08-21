@@ -94,14 +94,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       let data = await db.getData();
       const settings = await db.getSettings();
       const stationImportKey = 'muhafiz_station_custody_imported_v1';
+      const stationBalanceFixKey = 'muhafiz_station_balance_fixed_v2';
       if (!localStorage.getItem(stationImportKey) && !data.wallets?.some(w => w.name === STATION_CUSTODY_NAME)) {
         const walletId = uuidv4();
         const now = Date.now();
-        const stationWallet: Wallet = { id: walletId, name: STATION_CUSTODY_NAME, balance: 790, isActive: true, createdAt: now, budget: undefined };
+        const stationWallet: Wallet = { id: walletId, name: STATION_CUSTODY_NAME, balance: 740, isActive: true, createdAt: now, budget: undefined };
         const importedTransactions: Transaction[] = STATION_CUSTODY_TRANSACTIONS.map((tx, index) => ({ ...tx, id: uuidv4(), walletId, createdAt: tx.date || now }));
         data = { wallets: [...(data.wallets || []), stationWallet], transactions: [...(data.transactions || []), ...importedTransactions], categories: data.categories || [], reconciliations: data.reconciliations || [], lastUpdated: now };
         await db.saveData(data);
         localStorage.setItem(stationImportKey, '1');
+      }
+      const stationWallet = data.wallets?.find(w => w.name === STATION_CUSTODY_NAME);
+      if (stationWallet && !localStorage.getItem(stationBalanceFixKey) && stationWallet.balance === 790) {
+        const correctedWallets = data.wallets.map(w => w.id === stationWallet.id ? { ...w, balance: 740 } : w);
+        data = { ...data, wallets: correctedWallets, lastUpdated: Date.now() };
+        await db.saveData(data);
+        localStorage.setItem(stationBalanceFixKey, '1');
       }
       // Check lockout expiration on init
       const storedLockout = localStorage.getItem('muhafiz_lockout');
