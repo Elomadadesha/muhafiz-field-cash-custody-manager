@@ -9,6 +9,8 @@ import { format, isSameDay, isSameWeek, isSameMonth, startOfDay, endOfDay } from
 import { arSA } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { toPng } from 'html-to-image';
+import { Media } from '@capacitor-community/media';
+import { Share } from '@capacitor/share';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/app';
@@ -90,18 +92,44 @@ export function ReportsPage() {
   const walletFor = (id: string) => wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
 
   const reportText = () => `تقرير محافظ العُهَد\nالفترة: ${periodLabel}\nالمحفظة: ${walletName}\nالدخل: ${amount(summary.income)}\nالمصروفات: ${amount(summary.expense)}\nالصافي: ${amount(summary.net)}`;
-  const handleShare = async () => {
+  const createReportImage = async () => {
+    if (!reportRef.current) throw new Error('report unavailable');
+    return toPng(reportRef.current, { cacheBust: true, backgroundColor: '#0d162b', pixelRatio: 2 });
+  };
+  const saveReportToGallery = async () => {
     setIsSharing(true);
     try {
-      if (!reportRef.current) throw new Error('report unavailable');
-      const dataUrl = await toPng(reportRef.current, { cacheBust: true, backgroundColor: '#0d162b', pixelRatio: 2 });
+      const dataUrl = await createReportImage();
+      const albums = await Media.getAlbums();
+      let album = albums.albums.find(item => item.name === 'محافظ العهد');
+      if (!album) {
+        await Media.createAlbum({ name: 'محافظ العهد' });
+        const refreshed = await Media.getAlbums();
+        album = refreshed.albums.find(item => item.name === 'محافظ العهد');
+      }
+      if (!album) throw new Error('album unavailable');
+      await Media.savePhoto({ path: dataUrl, albumIdentifier: album.identifier, fileName: `muhafiz-report-${Date.now()}` });
+      toast.success('تم حفظ صورة التقرير في المعرض داخل ألبوم محافظ العهد');
+    } catch {
+      toast.error('تعذر حفظ الصورة في المعرض؛ تحقق من إذن الصور');
+    } finally { setIsSharing(false); }
+  };
+  const shareReportToWhatsApp = async () => {
+    setIsSharing(true);
+    try {
+      const dataUrl = await createReportImage();
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `muhafiz-report-${Date.now()}.png`, { type: 'image/png' });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText(), files: [file] });
-      else { const link = document.createElement('a'); link.href = dataUrl; link.download = file.name; link.click(); toast.success('تم حفظ التقرير كصورة'); }
-    } catch { if (navigator.share) await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText() }); else { await navigator.clipboard?.writeText(reportText()); toast.success('تم نسخ التقرير'); } }
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText(), files: [file] });
+      } else {
+        await Share.share({ title: 'تقرير محافظ العُهَد', text: reportText(), dialogTitle: 'اختر واتساب لمشاركة التقرير' });
+      }
+      toast.success('اختر واتساب من نافذة المشاركة لإرسال التقرير');
+    } catch { toast.error('تعذر فتح مشاركة واتساب'); }
     finally { setIsSharing(false); }
   };
+  const handleShare = shareReportToWhatsApp;
   const handleExport = () => { try { generateDailyTreasuryReport(filtered, wallets, range); toast.success('تم تصدير التقرير بصيغة CSV المتوافقة مع Excel'); } catch { toast.error('تعذر تصدير التقرير'); } };
 
   return (
@@ -112,10 +140,11 @@ export function ReportsPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-5 pb-28 pt-5">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#1b2940] text-slate-300"><Filter className="h-5 w-5" /></div>
-          <div className="relative flex-1"><select value={selectedWallet} onChange={e => setSelectedWallet(e.target.value)} className="h-11 w-full appearance-none rounded-2xl border border-white/10 bg-[#1b2940] px-4 pl-10 text-right text-sm font-semibold text-white outline-none"><option value="all">جميع العُهد</option>{wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select><ChevronDown className="pointer-events-none absolute left-4 top-3 h-5 w-5 text-slate-400" /></div>
-          <Button onClick={handleExport} size="icon" variant="outline" className="h-11 w-11 rounded-2xl border-white/10 bg-[#1b2940] text-slate-300"><Save className="h-5 w-5" /></Button>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-[#1b2940] text-slate-300"><Filter className="h-5 w-5" /></div>
+          <div className="relative min-w-[170px] flex-1"><select value={selectedWallet} onChange={e => setSelectedWallet(e.target.value)} className="h-11 w-full appearance-none rounded-2xl border border-white/10 bg-[#1b2940] px-4 pl-10 text-right text-sm font-semibold text-white outline-none"><option value="all">جميع العُهد</option>{wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select><ChevronDown className="pointer-events-none absolute left-4 top-3 h-5 w-5 text-slate-400" /></div>
+          <Button onClick={saveReportToGallery} disabled={isSharing} variant="outline" className="h-11 gap-2 rounded-2xl border-white/10 bg-[#1b2940] px-3 text-xs text-slate-200"><Save className="h-4 w-4 text-emerald-400" /><span>حفظ الصورة</span></Button>
+          <Button onClick={shareReportToWhatsApp} disabled={isSharing} className="h-11 gap-2 rounded-2xl bg-[#25D366] px-3 text-xs text-white hover:bg-[#1da851]"><Share2 className="h-4 w-4" /><span>واتساب</span></Button>
         </div>
 
         <div className="mb-3 grid grid-cols-5 gap-1 rounded-2xl bg-[#1b2940] p-1">

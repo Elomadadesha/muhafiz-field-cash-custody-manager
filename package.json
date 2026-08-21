@@ -12,10 +12,13 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@capacitor-community/media": "9.1.0",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "8.1.1",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/filesystem": "8.1.3",
+    "@capacitor/share": "8.0.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@fontsource/tajawal": "^5.0.0",
