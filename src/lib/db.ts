@@ -9,6 +9,7 @@ export interface AppSettings {
   autoLockMinutes: number; // 0 = disabled
   lastActive: number;
   currency: 'SAR' | 'EGP' | 'USD';
+  lastBackupAt?: number;
 }
 export const CURRENCIES = {
   SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
@@ -32,6 +33,7 @@ const INITIAL_SETTINGS: AppSettings = {
   autoLockMinutes: 5,
   lastActive: Date.now(),
   currency: 'EGP',
+  lastBackupAt: undefined,
 };
 export const db = {
   // Data Operations

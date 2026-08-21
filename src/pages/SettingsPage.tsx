@@ -10,8 +10,10 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2, Pencil, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Wallet, Tag, LogOut, Info, Download, Upload, Shield, Clock, Coins, Settings2, Pencil, AlertTriangle, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Wallet as WalletType, Category } from '@/types/app';
@@ -30,6 +32,7 @@ export function SettingsPage() {
   const restoreData = useAppStore(s => s.restoreData);
   const logout = useAppStore(s => s.logout);
   const navigate = useNavigate();
+  const backupDue = !settings.lastBackupAt || Date.now() - settings.lastBackupAt > 7 * 24 * 60 * 60 * 1000;
   // Category State
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddCatOpen, setIsAddCatOpen] = useState(false);
@@ -153,6 +156,10 @@ export function SettingsPage() {
       navigate('/login');
     }
   };
+  const createEncryptedBackup = async () => {
+    if (!backupPassword) throw new Error('backup password required');
+    return encryptData({ wallets, transactions, categories, lastUpdated: Date.now() }, backupPassword);
+  };
   const handleBackup = async () => {
     if (!backupPassword) {
       toast.error('الرجاء إدخال كلمة مرور للتشفير');
@@ -160,13 +167,7 @@ export function SettingsPage() {
     }
     setIsLoading(true);
     try {
-      const dataToBackup = {
-        wallets,
-        transactions,
-        categories,
-        lastUpdated: Date.now()
-      };
-      const encrypted = await encryptData(dataToBackup, backupPassword);
+      const encrypted = await createEncryptedBackup();
       const blob = new Blob([encrypted], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -174,17 +175,35 @@ export function SettingsPage() {
       a.download = `muhafiz-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الاحتياطي بنجاح');
+      await updateSettings({ lastBackupAt: Date.now() });
+      toast.success('تم تصدير النسخة الاحتياطية المشفّرة بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
       console.error(error);
       toast.error('فشل إنشاء النسخة الاحتياطية');
-    } finally {
-      setIsLoading(false);
+    } finally { setIsLoading(false); }
+  };
+  const handleShareBackup = async () => {
+    if (!backupPassword) {
+      toast.error('اكتب كلمة مرور التشفير أولًا');
+      return;
     }
+    setIsLoading(true);
+    try {
+      const encrypted = await createEncryptedBackup();
+      const fileName = `muhafiz-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      const saved = await Filesystem.writeFile({ path: fileName, data: btoa(unescape(encodeURIComponent(encrypted))), directory: Directory.Cache, recursive: true });
+      const uri = (await Filesystem.getUri({ directory: Directory.Cache, path: fileName })).uri || saved.uri;
+      await Share.share({ title: 'نسخة محافظ العُهَد الاحتياطية', text: 'نسخة احتياطية مشفّرة؛ اختر Google Drive لحفظها', files: [uri], dialogTitle: 'حفظ النسخة الاحتياطية' });
+      await updateSettings({ lastBackupAt: Date.now() });
+      toast.success('اختر Google Drive من نافذة المشاركة لحفظ النسخة');
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر مشاركة النسخة؛ استخدم زر التصدير بدلًا من ذلك');
+    } finally { setIsLoading(false); }
   };
   const handleRestore = async () => {
     if (!restoreFile || !backupPassword) return;
@@ -217,7 +236,8 @@ export function SettingsPage() {
           </div>
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-24">
+      <div className="flex-1 min-w-0 overflow-y-auto px-4 py-6 space-y-8 pb-24 sm:px-6">
+        {backupDue && <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-right text-sm leading-6 text-amber-200">لم تُنشأ نسخة احتياطية خلال آخر 7 أيام. استخدم «نسخ احتياطي» أو «مشاركة النسخة» لحفظ نسخة مشفّرة خارج الهاتف.</div>}
         {/* General Settings */}
         <section>
           <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
@@ -317,7 +337,7 @@ export function SettingsPage() {
             </div>
             <div className="h-px bg-slate-50 dark:bg-slate-700" />
             {/* Backup & Restore Buttons */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {/* Backup Dialog */}
               <Dialog open={isBackupOpen} onOpenChange={setIsBackupOpen}>
                 <DialogTrigger asChild>
@@ -355,6 +375,10 @@ export function SettingsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              <Button onClick={() => setIsBackupOpen(true)} variant="outline" className="gap-2 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <Share2 className="w-4 h-4 text-emerald-600" />
+                مشاركة النسخة
+              </Button>
               {/* Restore Dialog */}
               <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
                 <DialogTrigger asChild>
