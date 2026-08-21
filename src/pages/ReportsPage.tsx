@@ -1,23 +1,23 @@
-import { useState, useRef, useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { CURRENCIES } from '@/lib/db';
 import { RtlWrapper } from '@/components/ui/rtl-wrapper';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
-import { Share2, FileSpreadsheet, Filter } from 'lucide-react';
-import { format, isSameDay, isSameWeek, isSameMonth } from 'date-fns';
+import { FileSpreadsheet, Filter, Save, Share2, Search, ChevronDown, TrendingUp, WalletCards } from 'lucide-react';
+import { format, isSameDay, isSameWeek, isSameMonth, startOfDay, endOfDay } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/app';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateDailyTreasuryReport } from '@/lib/excel';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-type TimeRange = 'today' | 'week' | 'month' | 'all';
-// Blue-centric palette
-const COLORS = ['#2563EB', '#0EA5E9', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
+
+type TimeRange = 'today' | 'week' | 'month' | 'all' | 'custom';
+type ReportTab = 'categories' | 'treasury' | 'analysis' | 'general';
+const COLORS = ['#3b82f6', '#00c78b', '#ff9f00', '#ff6b78', '#8b5cf6', '#22d3ee', '#f472b6'];
+
 export function ReportsPage() {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
@@ -25,397 +25,122 @@ export function ReportsPage() {
   const settings = useAppStore(s => s.settings);
   const currency = CURRENCIES[settings.currency];
   const [range, setRange] = useState<TimeRange>('today');
-  const [selectedWalletFilter, setSelectedWalletFilter] = useState<string>('all');
-  const reportRef = useRef<HTMLDivElement>(null);
+  const [selectedWallet, setSelectedWallet] = useState('all');
+  const [activeTab, setActiveTab] = useState<ReportTab>('general');
+  const [advanced, setAdvanced] = useState(false);
+  const [customFrom, setCustomFrom] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [customTo, setCustomTo] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isSharing, setIsSharing] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
-  // Filter transactions based on range and wallet
-  const filteredTransactions = useMemo(() => {
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
     const now = new Date();
-    return transactions.filter(t => {
-      // Wallet Filter
-      if (selectedWalletFilter !== 'all' && t.walletId !== selectedWalletFilter) {
-        return false;
-      }
-      // Date Filter
-      const date = new Date(t.date);
+    return transactions.filter(tx => {
+      if (selectedWallet !== 'all' && tx.walletId !== selectedWallet) return false;
+      const date = new Date(tx.date);
       if (range === 'today') return isSameDay(date, now);
       if (range === 'week') return isSameWeek(date, now, { weekStartsOn: 6 });
       if (range === 'month') return isSameMonth(date, now);
+      if (range === 'custom') {
+        return date >= startOfDay(new Date(`${customFrom}T00:00:00`)) && date <= endOfDay(new Date(`${customTo}T00:00:00`));
+      }
       return true;
     }).sort((a, b) => b.date - a.date);
-  }, [transactions, range, selectedWalletFilter]);
-  // Calculate summaries for General Report
+  }, [transactions, selectedWallet, range, customFrom, customTo]);
+
   const summary = useMemo(() => {
-    const income = filteredTransactions
-      .filter(t => t.type === 'deposit')
-      .reduce((acc, t) => acc + t.amount, 0);
-    const expense = filteredTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, t) => acc + t.amount, 0);
+    const income = filtered.filter(t => t.type === 'deposit').reduce((sum, t) => sum + t.amount, 0);
+    const expense = filtered.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     return { income, expense, net: income - expense };
-  }, [filteredTransactions]);
-  // Prepare chart data
-  const chartData = useMemo(() => {
-    const categoryMap = new Map<string, number>();
-    filteredTransactions
-      .filter(t => t.type === 'expense')
-      .forEach(t => {
-        let key = t.categoryId;
-        // Use a composite key for custom categories to group them by name
-        if (key === 'custom' && t.customCategoryName) {
-          key = `custom:${t.customCategoryName}`;
-        }
-        const current = categoryMap.get(key) || 0;
-        categoryMap.set(key, current + t.amount);
-      });
-    return Array.from(categoryMap.entries())
-      .map(([id, value]) => {
-        let name = 'غير محدد';
-        if (id.startsWith('custom:')) {
-          name = id.replace('custom:', '');
-        } else {
-          name = categories.find(c => c.id === id)?.name || 'غير محدد';
-        }
-        return { name, value };
-      })
-      .sort((a, b) => b.value - a.value);
-  }, [filteredTransactions, categories]);
-  // Prepare Daily Treasury Data
+  }, [filtered]);
+
+  const categoryData = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.filter(t => t.type === 'expense').forEach(t => {
+      const id = t.categoryId === 'custom' ? `custom:${t.customCategoryName || 'مصروف مخصص'}` : t.categoryId;
+      map.set(id, (map.get(id) || 0) + t.amount);
+    });
+    return [...map.entries()].map(([id, value]) => ({
+      name: id.startsWith('custom:') ? id.slice(7) : categories.find(c => c.id === id)?.name || 'غير محدد',
+      value,
+    })).sort((a, b) => b.value - a.value);
+  }, [filtered, categories]);
+
   const treasuryData = useMemo(() => {
-    const grouped = new Map<string, Map<string, { income: number; expense: number }>>();
-    filteredTransactions.forEach(tx => {
-      const dateKey = format(tx.date, 'yyyy-MM-dd');
-      if (!grouped.has(dateKey)) grouped.set(dateKey, new Map());
-      const dateGroup = grouped.get(dateKey)!;
-      if (!dateGroup.has(tx.walletId)) dateGroup.set(tx.walletId, { income: 0, expense: 0 });
-      const stats = dateGroup.get(tx.walletId)!;
-      if (tx.type === 'deposit') stats.income += tx.amount;
-      else stats.expense += tx.amount;
+    const map = new Map<string, { income: number; expense: number }>();
+    filtered.forEach(tx => {
+      const key = format(tx.date, 'yyyy-MM-dd');
+      const item = map.get(key) || { income: 0, expense: 0 };
+      if (tx.type === 'deposit') item.income += tx.amount; else item.expense += tx.amount;
+      map.set(key, item);
     });
-    const result: { date: string; items: { walletId: string; income: number; expense: number }[] }[] = [];
-    Array.from(grouped.keys()).sort().reverse().forEach(dateKey => {
-      const dateGroup = grouped.get(dateKey)!;
-      const items: { walletId: string; income: number; expense: number }[] = [];
-      dateGroup.forEach((stats, walletId) => {
-        items.push({ walletId, ...stats });
-      });
-      result.push({ date: dateKey, items });
-    });
-    return result;
-  }, [filteredTransactions]);
-  const generateTextReport = () => {
-    const dateStr = range === 'all' ? 'ج��يع العمليات' : format(new Date(), 'PPP', { locale: arSA });
-    const walletStr = selectedWalletFilter === 'all' ? 'جميع العُهد' : (wallets.find(w => w.id === selectedWalletFilter)?.name || 'عُهدة محددة');
-    let text = `*ت��رير المصروفات - ${dateStr}*\n`;
-    text += `📁 العُهدة: ${walletStr}\n\n`;
-    text += `💰 الدخل: ${summary.income.toLocaleString()} ${currency.symbol}\n`;
-    text += `💸 المصروفات: ${summary.expense.toLocaleString()} ${currency.symbol}\n`;
-    text += `📊 الصافي: ${summary.net.toLocaleString()} ${currency.symbol}\n\n`;
-    text += `*أهم البنود:*\n`;
-    chartData.slice(0, 5).forEach(item => {
-      text += `- ${item.name}: ${item.value.toLocaleString()} ${currency.symbol}\n`;
-    });
-    return text;
-  };
+    return [...map.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([date, values]) => ({
+      date: format(new Date(`${date}T12:00:00`), 'dd MMMM yyyy', { locale: arSA }),
+      shortDate: format(new Date(`${date}T12:00:00`), 'dd/MM'),
+      ...values,
+      net: values.income - values.expense,
+    }));
+  }, [filtered]);
+
+  const trendData = useMemo(() => treasuryData.slice().reverse().slice(-7), [treasuryData]);
+  const walletName = selectedWallet === 'all' ? 'جميع العُهد' : wallets.find(w => w.id === selectedWallet)?.name || 'عُهدة محددة';
+  const periodLabel = range === 'today' ? 'اليوم' : range === 'week' ? 'هذا الأسبوع' : range === 'month' ? 'هذا الشهر' : range === 'custom' ? `${customFrom} إلى ${customTo}` : 'جميع العمليات';
+  const amount = (value: number) => `${value.toLocaleString('ar-EG')} ${currency.symbol}`;
+  const categoryName = (tx: Transaction) => tx.categoryId === 'deposit_sys' ? 'إضافة رصيد' : tx.categoryId === 'custom' ? tx.customCategoryName || 'مصروف مخصص' : categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
+  const walletFor = (id: string) => wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
+
+  const reportText = () => `تقرير محافظ العُهَد\nالفترة: ${periodLabel}\nالمحفظة: ${walletName}\nالدخل: ${amount(summary.income)}\nالمصروفات: ${amount(summary.expense)}\nالصافي: ${amount(summary.net)}`;
   const handleShare = async () => {
-    if (!reportRef.current) return;
     setIsSharing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const dataUrl = await toPng(reportRef.current, {
-        cacheBust: true,
-        backgroundColor: '#ffffff',
-        pixelRatio: 2,
-        style: { fontFamily: "'Cairo', sans-serif" }
-      });
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `report-${format(new Date(), 'yyyy-MM-dd')}.png`, { type: 'image/png' });
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: 'تقرير المصروفات',
-          text: generateTextReport(),
-          files: [file]
-        });
-        toast.success('تمت المشاركة بنجاح');
-      } else {
-        const link = document.createElement('a');
-        link.download = `report-${format(new Date(), 'yyyy-MM-dd')}.png`;
-        link.href = dataUrl;
-        link.click();
-        toast.success('تم تحميل التقرير كصورة');
-      }
-    } catch (error) {
-      console.error('Image share failed:', error);
-      try {
-        const text = generateTextReport();
-        if (navigator.share) {
-          await navigator.share({ title: 'تقرير المصروفات', text: text });
-        } else {
-          await navigator.clipboard.writeText(text);
-          toast.success('تم نسخ التقرير النصي للحافظة');
-        }
-      } catch (textError) {
-        toast.error('فشل مشاركة التقرير');
-      }
-    } finally {
-      setIsSharing(false);
-    }
+      if (!reportRef.current) throw new Error('report unavailable');
+      const dataUrl = await toPng(reportRef.current, { cacheBust: true, backgroundColor: '#0d162b', pixelRatio: 2 });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `muhafiz-report-${Date.now()}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText(), files: [file] });
+      else { const link = document.createElement('a'); link.href = dataUrl; link.download = file.name; link.click(); toast.success('تم حفظ التقرير كصورة'); }
+    } catch { if (navigator.share) await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText() }); else { await navigator.clipboard?.writeText(reportText()); toast.success('تم نسخ التقرير'); } }
+    finally { setIsSharing(false); }
   };
-  const handleExcelExport = () => {
-    try {
-      generateDailyTreasuryReport(filteredTransactions, wallets, range);
-      toast.success('تم تصدير مل�� Excel بنجاح');
-    } catch (error) {
-      console.error(error);
-      toast.error('فشل تصدير الملف');
-    }
-  };
-  const getCategoryName = (tx: Transaction) => {
-    if (tx.categoryId === 'deposit_sys') return 'تغذية رصيد';
-    if (tx.categoryId === 'custom') return tx.customCategoryName || 'مصروف مخصص';
-    return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
-  };
-  const getWalletName = (id: string) => {
-    return wallets.find(w => w.id === id)?.name || 'محفظة محذوفة';
-  };
+  const handleExport = () => { try { generateDailyTreasuryReport(filtered, wallets, range); toast.success('تم تصدير التقرير إلى Excel'); } catch { toast.error('تعذر تصدير التقرير'); } };
+
   return (
     <RtlWrapper>
-      <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">التقارير</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">ملخص العمليات المالية</p>
-        </div>
-        {activeTab === 'general' ? (
-          <Button
-            onClick={handleShare}
-            disabled={isSharing}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 rounded-xl"
-          >
-            {isSharing ? 'جاري المعالجة...' : (
-              <>
-                <Share2 className="w-4 h-4" />
-                <span>مشاركة</span>
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={handleExcelExport}
-            size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 rounded-xl"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>تصدير Excel</span>
-          </Button>
-        )}
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0d162b]/95 px-5 pb-4 pt-8 backdrop-blur">
+        <div><h1 className="text-2xl font-extrabold text-white">التقارير</h1><p className="text-sm text-slate-400">تحليل وإحصائيات المحافظ والعُهَد</p></div>
+        <Button onClick={activeTab === 'general' ? handleShare : handleExport} disabled={isSharing} className="gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500">{activeTab === 'general' ? <><Share2 className="h-4 w-4" />مشاركة</> : <><FileSpreadsheet className="h-4 w-4" />تصدير Excel</>}</Button>
       </header>
-      {/* Filters */}
-      <div className="px-6 mb-4 space-y-3">
-        {/* Wallet Filter */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-            <Filter className="w-4 h-4" />
-          </div>
-          <Select value={selectedWalletFilter} onValueChange={setSelectedWalletFilter}>
-            <SelectTrigger className="flex-1 h-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-right flex-row-reverse" dir="rtl">
-              <SelectValue placeholder="جميع العُهد" />
-            </SelectTrigger>
-            <SelectContent dir="rtl">
-              <SelectItem value="all" className="text-right flex-row-reverse">جميع العُهد</SelectItem>
-              {wallets.map(w => (
-                <SelectItem key={w.id} value={w.id} className="text-right flex-row-reverse">
-                  {w.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+      <main className="flex-1 overflow-y-auto px-5 pb-28 pt-5">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#1b2940] text-slate-300"><Filter className="h-5 w-5" /></div>
+          <div className="relative flex-1"><select value={selectedWallet} onChange={e => setSelectedWallet(e.target.value)} className="h-11 w-full appearance-none rounded-2xl border border-white/10 bg-[#1b2940] px-4 pl-10 text-right text-sm font-semibold text-white outline-none"><option value="all">جميع العُهد</option>{wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select><ChevronDown className="pointer-events-none absolute left-4 top-3 h-5 w-5 text-slate-400" /></div>
+          <Button onClick={handleExport} size="icon" variant="outline" className="h-11 w-11 rounded-2xl border-white/10 bg-[#1b2940] text-slate-300"><Save className="h-5 w-5" /></Button>
         </div>
-        {/* Time Range Filter */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
-          {[
-            { id: 'today', label: 'اليوم' },
-            { id: 'week', label: 'الأسبوع' },
-            { id: 'month', label: 'الشهر' },
-            { id: 'all', label: 'الكل' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setRange(tab.id as TimeRange)}
-              className={cn(
-                "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition-all whitespace-nowrap",
-                range === tab.id
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+
+        <div className="mb-3 grid grid-cols-5 gap-1 rounded-2xl bg-[#1b2940] p-1">
+          {[['today','اليوم'],['week','الأسبوع'],['month','الشهر'],['all','الكل'],['custom','مخصص']].map(([id, label]) => <button key={id} onClick={() => setRange(id as TimeRange)} className={cn('rounded-xl px-2 py-2 text-xs font-bold transition', range === id ? 'bg-[#3a4a60] text-white shadow' : 'text-slate-400')}>{label}</button>)}
         </div>
-      </div>
-      <div className="flex-1 overflow-y-auto px-6 pb-24">
-        <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="general">التقرير العام</TabsTrigger>
-            <TabsTrigger value="treasury">الخزينة اليومية</TabsTrigger>
-          </TabsList>
-          <TabsContent value="general" className="space-y-6">
-            <div ref={reportRef} className="bg-white dark:bg-slate-900 pb-4">
-              {/* Date Header */}
-              <div className="mb-6 text-center">
-                <p className="text-slate-400 text-xs">الفترة</p>
-                <p className="text-slate-900 dark:text-white font-bold">
-                  {range === 'all' ? 'جميع العمليات' : format(new Date(), 'PPP', { locale: arSA })}
-                </p>
-                {selectedWalletFilter !== 'all' && (
-                  <p className="text-blue-600 text-xs mt-1 font-medium">
-                    {wallets.find(w => w.id === selectedWalletFilter)?.name}
-                  </p>
-                )}
-              </div>
-              {/* Summary Cards */}
-              <div className="grid grid-cols-3 gap-3 mb-8">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl border border-blue-100 dark:border-blue-800">
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">الدخل</p>
-                  <p className="text-lg font-bold text-blue-700 dark:text-blue-300 tabular-nums">{summary.income.toLocaleString()}</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-800">
-                  <p className="text-xs text-red-600 dark:text-red-400 mb-1">المصروفات</p>
-                  <p className="text-lg font-bold text-red-700 dark:text-red-300 tabular-nums">{summary.expense.toLocaleString()}</p>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700">
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">الصافي</p>
-                  <p className={cn(
-                    "text-lg font-bold tabular-nums",
-                    summary.net >= 0 ? "text-slate-900 dark:text-white" : "text-red-600 dark:text-red-400"
-                  )}>
-                    {summary.net.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              {/* Chart */}
-              {chartData.length > 0 && (
-                <div className="mb-8 h-64 w-full">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">توزيع المصروفات</h3>
-                  <div className="h-56 w-full">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                      <PieChart>
-                        <Pie
-                          data={chartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => [`${value.toLocaleString()} ${currency.symbol}`, 'المبلغ']}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-              {/* Transactions Table */}
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">تفاصيل العمليات</h3>
-                {filteredTransactions.length === 0 ? (
-                  <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                    <p className="text-slate-400 text-sm">لا توج�� عمليات في هذه الفترة</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredTransactions.map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className={cn(
-                            "w-2 h-10 rounded-full shrink-0",
-                            tx.type === 'expense' ? "bg-red-500" : "bg-blue-500"
-                          )} />
-                          <div className="min-w-0">
-                            <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{getCategoryName(tx)}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                              {getWalletName(tx.walletId)} • {format(tx.date, 'h:mm a', { locale: arSA })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-left shrink-0">
-                          <p className={cn(
-                            "font-bold text-sm tabular-nums",
-                            tx.type === 'expense' ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"
-                          )}>
-                            {tx.type === 'expense' ? '-' : '+'}{tx.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-                <p className="text-xs text-slate-400">تم إنشاء التقرير بواسطة تطبيق Abu MaWaDa</p>
-              </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="treasury" className="space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-              {treasuryData.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-slate-400 text-sm">لا توجد بيانات للعرض</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {treasuryData.map((day) => (
-                    <div key={day.date} className="p-4">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg inline-block">
-                        {format(new Date(day.date), 'PPP', { locale: arSA })}
-                      </h3>
-                      <div className="space-y-2">
-                        {day.items.map((item) => (
-                          <div key={item.walletId} className="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <span className="font-medium text-slate-700 dark:text-slate-300 w-1/3 truncate">
-                              {getWalletName(item.walletId)}
-                            </span>
-                            <div className="flex-1 flex justify-end gap-4 text-xs">
-                              <div className="text-center">
-                                <span className="block text-slate-400 mb-0.5">مدين (دخل)</span>
-                                <span className="font-bold text-blue-600">{item.income.toLocaleString()}</span>
-                              </div>
-                              <div className="text-center">
-                                <span className="block text-slate-400 mb-0.5">دائن (صرف)</span>
-                                <span className="font-bold text-red-600">{item.expense.toLocaleString()}</span>
-                              </div>
-                              <div className="text-center min-w-[60px]">
-                                <span className="block text-slate-400 mb-0.5">الصافي</span>
-                                <span className={cn(
-                                  "font-bold",
-                                  (item.income - item.expense) >= 0 ? "text-emerald-600" : "text-red-600"
-                                )}>
-                                  {(item.income - item.expense).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+        <button onClick={() => setAdvanced(v => !v)} className="mb-4 flex w-full items-center justify-end gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-400"><Search className="h-4 w-4" /> بحث متقدم <span className="mr-auto text-blue-400">{advanced ? 'إخفاء' : 'فتح'}</span></button>
+        {advanced && <div className="mb-5 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#18243a] p-4"><label className="text-xs text-slate-400">من<input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setRange('custom'); }} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d162b] p-2 text-white" /></label><label className="text-xs text-slate-400">إلى<input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setRange('custom'); }} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d162b] p-2 text-white" /></label></div>}
+
+        <div className="mb-6 grid grid-cols-4 gap-1 rounded-3xl bg-[#1b2940] p-2">
+          {([['categories','تصنيفات'],['treasury','خزينة'],['analysis','تحليل'],['general','عام']] as [ReportTab,string][]).map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={cn('rounded-2xl py-3 text-sm font-bold', activeTab === id ? 'bg-[#0d162b] text-white shadow' : 'text-slate-400')}>{label}</button>)}
+        </div>
+
+        <section ref={reportRef} className="space-y-5">
+          <div className="text-center"><p className="text-sm text-slate-400">ملخص الفترة</p><h2 className="text-xl font-extrabold text-white">{periodLabel}</h2><p className="text-xs text-blue-400">{walletName}</p></div>
+          {activeTab === 'general' && <>
+            <div className="glass-card grid grid-cols-3 gap-2 p-4 text-center"><div><p className="text-xs text-slate-400">الصافي</p><strong className={cn('text-lg', summary.net >= 0 ? 'text-white' : 'text-red-400')}>{amount(summary.net)}</strong></div><div className="border-x border-white/10"><p className="text-xs text-red-300">المصروفات</p><strong className="text-lg text-red-400">{amount(summary.expense)}</strong></div><div><p className="text-xs text-blue-300">الدخل</p><strong className="text-lg text-blue-400">{amount(summary.income)}</strong></div></div>
+            <div className="glass-card p-4"><div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-bold text-white">اتجاه المصروفات</h3><TrendingUp className="h-5 w-5 text-blue-400" /></div><p className="mb-3 text-xs text-slate-400">آخر 7 أيام</p>{trendData.length ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={trendData}><CartesianGrid stroke="#2b3a50" vertical={false} /><XAxis dataKey="shortDate" stroke="#94a3b8" tick={{ fontSize: 10 }} /><YAxis hide /><Tooltip contentStyle={{ background: '#18243a', border: '1px solid #334155', borderRadius: 12 }} /><Bar dataKey="expense" fill="#3b82f6" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div> : <p className="py-12 text-center text-sm text-slate-500">ابدأ بتسجيل مصروفاتك اليومية لتظهر التحليلات هنا</p>}</div>
+          </>}
+          {activeTab === 'analysis' && <div className="glass-card p-4"><h3 className="mb-4 text-lg font-bold text-white">تحليل المصروفات</h3>{categoryData.length ? <div className="h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={92} paddingAngle={4}>{categoryData.map((item, i) => <Cell key={item.name} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#18243a', border: '1px solid #334155', borderRadius: 12 }} /><Legend wrapperStyle={{ color: '#cbd5e1', fontSize: 12 }} /></PieChart></ResponsiveContainer></div> : <p className="py-16 text-center text-slate-400">لا توجد مصروفات في هذه الفترة</p>}</div>}
+          {activeTab === 'categories' && <div className="space-y-3">{categoryData.length ? categoryData.map((item, i) => <div key={item.name} className="glass-card p-4"><div className="mb-2 flex items-center justify-between"><span className="font-semibold text-white">{item.name}</span><span className="font-bold text-blue-400">{amount(item.value)}</span></div><div className="h-2 rounded-full bg-[#0d162b]"><div className="h-full rounded-full" style={{ width: `${summary.expense ? (item.value / summary.expense) * 100 : 0}%`, background: COLORS[i % COLORS.length] }} /></div></div>) : <div className="glass-card py-16 text-center text-slate-400">لا توجد تصنيفات في هذه الفترة</div>}</div>}
+          {activeTab === 'treasury' && <div className="glass-card overflow-hidden"><div className="grid grid-cols-4 border-b border-white/10 bg-[#1b2940] p-3 text-center text-xs font-bold text-slate-300"><span>التاريخ</span><span>الدخل</span><span>الصرف</span><span>الصافي</span></div>{treasuryData.length ? treasuryData.map(day => <div key={day.date} className="grid grid-cols-4 border-b border-white/5 p-4 text-center text-xs"><span className="text-right text-slate-300">{day.date}</span><span className="text-blue-400">{day.income.toLocaleString()}</span><span className="text-red-400">{day.expense.toLocaleString()}</span><span className={day.net >= 0 ? 'text-emerald-400' : 'text-red-400'}>{day.net.toLocaleString()}</span></div>) : <p className="py-16 text-center text-slate-400">لا توجد بيانات للعرض</p>}</div>}
+
+          {(activeTab === 'general' || activeTab === 'categories') && <div className="glass-card p-4"><div className="mb-4 flex items-center gap-2"><WalletCards className="h-5 w-5 text-blue-400" /><h3 className="text-lg font-bold text-white">تفاصيل العمليات</h3></div>{filtered.length ? <div className="space-y-2">{filtered.slice(0, 30).map(tx => <div key={tx.id} className="flex items-center justify-between rounded-2xl bg-[#18243a] p-3"><div className="flex min-w-0 items-center gap-3"><span className={cn('h-10 w-1 rounded-full', tx.type === 'expense' ? 'bg-red-400' : 'bg-blue-400')} /><div className="min-w-0"><p className="truncate text-sm font-bold text-white">{categoryName(tx)}</p><p className="truncate text-xs text-slate-400">{walletFor(tx.walletId)} • {format(tx.date, 'dd/MM h:mm a', { locale: arSA })}</p></div></div><strong className={cn('text-sm', tx.type === 'expense' ? 'text-red-400' : 'text-blue-400')}>{tx.type === 'expense' ? '-' : '+'}{amount(tx.amount)}</strong></div>)}</div> : <p className="py-10 text-center text-slate-400">لا توجد عمليات في هذه الفترة</p>}</div>}
+        </section>
+      </main>
       <BottomNav />
     </RtlWrapper>
   );
