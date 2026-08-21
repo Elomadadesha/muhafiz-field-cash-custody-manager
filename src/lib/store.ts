@@ -39,6 +39,7 @@ interface AppState {
   renameWallet: (id: string, newName: string) => Promise<void>;
   updateWalletBudget: (id: string, budget: number) => Promise<void>;
   toggleWalletStatus: (id: string) => Promise<void>;
+  deleteWallet: (id: string, password: string) => Promise<boolean>;
   // Transaction Actions
   openTransactionDrawer: (walletId?: string, transactionId?: string, mode?: DrawerMode) => void;
   closeTransactionDrawer: () => void;
@@ -235,6 +236,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       set({ isLoading: false, error: 'فشل إضافة المحفظة' });
     }
+  },
+  deleteWallet: async (id: string, password: string) => {
+    const storedHash = await db.getPasswordHash();
+    if (!storedHash || storedHash !== await hashPassword(password)) return false;
+    const state = get();
+    const wallets = state.wallets.filter(w => w.id !== id);
+    const transactions = state.transactions.filter(t => t.walletId !== id);
+    const reconciliations = state.reconciliations.filter(r => r.walletId !== id);
+    await db.saveData({ wallets, transactions, categories: state.categories, reconciliations, lastUpdated: Date.now() });
+    set({ wallets, transactions, reconciliations });
+    return true;
   },
   renameWallet: async (id: string, newName: string) => {
     set({ isLoading: true });

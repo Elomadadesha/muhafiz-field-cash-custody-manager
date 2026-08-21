@@ -58,6 +58,8 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [deletingWallet, setDeletingWallet] = useState<WalletType | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
   // --- Category Handlers ---
   const handleAddCategory = async () => {
     const validation = CategorySchema.safeParse({ name: newCategoryName });
@@ -168,6 +170,17 @@ export function SettingsPage() {
       toast.success('تم تغيير كلمة المرور بنجاح');
       setIsPasswordOpen(false); setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('');
     } catch { toast.error('تعذر تغيير كلمة المرور'); }
+    finally { setIsLoading(false); }
+  };
+  const handleDeleteWallet = async () => {
+    if (!deletingWallet || !deletePassword) { toast.error('أدخل كلمة المرور للتأكيد'); return; }
+    setIsLoading(true);
+    try {
+      const ok = await useAppStore.getState().deleteWallet(deletingWallet.id, deletePassword);
+      if (!ok) { toast.error('كلمة المرور غير صحيحة'); return; }
+      toast.success('تم حذف العهدة وجميع معاملاتها نهائيًا');
+      setDeletingWallet(null); setDeletePassword('');
+    } catch { toast.error('تعذر حذف العهدة'); }
     finally { setIsLoading(false); }
   };
   const handleLogout = () => {
@@ -457,6 +470,7 @@ export function SettingsPage() {
             </Dialog>
           </div>
         </section>
+        {deletingWallet && <Dialog open={!!deletingWallet} onOpenChange={(open) => !open && setDeletingWallet(null)}><DialogContent dir="rtl"><DialogHeader><DialogTitle className="text-right text-red-400">حذف العهدة نهائيًا</DialogTitle><DialogDescription className="text-right leading-6">سيتم حذف «{deletingWallet.name}» وجميع معاملاتها المحلية. لا يمكن التراجع عن هذه العملية. أدخل كلمة مرور التطبيق للتأكيد.</DialogDescription></DialogHeader><div className="space-y-2 py-4"><Label className="block text-right">كلمة المرور</Label><Input type="password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} placeholder="أدخل كلمة المرور" className="h-12 text-center" /></div><DialogFooter><Button variant="destructive" onClick={handleDeleteWallet} disabled={isLoading || !deletePassword} className="h-12 w-full">{isLoading ? 'جاري الحذف...' : 'تأكيد الحذف النهائي'}</Button></DialogFooter></DialogContent></Dialog>}
         {/* Categories Section */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -507,7 +521,7 @@ export function SettingsPage() {
                   </div>
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                   {/* Edit Button for All Categories */}
                   <Button
                     variant="ghost"
@@ -592,10 +606,8 @@ export function SettingsPage() {
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Switch
-                      checked={wallet.isActive}
-                      onCheckedChange={() => toggleWalletStatus(wallet.id)}
-                    />
+                    <Switch checked={wallet.isActive} onCheckedChange={() => toggleWalletStatus(wallet.id)} />
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-red-500/10 hover:text-red-300" onClick={() => { setDeletingWallet(wallet); setDeletePassword(''); }} aria-label={`حذف ${wallet.name}`}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               ))
