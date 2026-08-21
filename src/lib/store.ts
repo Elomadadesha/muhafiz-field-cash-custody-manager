@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AppData, Wallet, Transaction, Category, Reconciliation } from '@/types/app';
 import { db, AppSettings } from '@/lib/db';
 import { hashPassword } from '@/lib/security';
+import { STATION_CUSTODY_NAME, STATION_CUSTODY_TRANSACTIONS } from '@/lib/stationCustody';
 import { v4 as uuidv4 } from 'uuid';
 export type DrawerMode = 'create' | 'edit' | 'duplicate';
 interface AppState {
@@ -89,8 +90,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       const hash = await db.getPasswordHash();
       const isSetup = !!hash;
       // Load data
-      const data = await db.getData();
+      let data = await db.getData();
       const settings = await db.getSettings();
+      const stationImportKey = 'muhafiz_station_custody_imported_v1';
+      if (!localStorage.getItem(stationImportKey) && !data.wallets?.some(w => w.name === STATION_CUSTODY_NAME)) {
+        const walletId = uuidv4();
+        const now = Date.now();
+        const stationWallet: Wallet = { id: walletId, name: STATION_CUSTODY_NAME, balance: 790, isActive: true, createdAt: now, budget: undefined };
+        const importedTransactions: Transaction[] = STATION_CUSTODY_TRANSACTIONS.map((tx, index) => ({ ...tx, id: uuidv4(), walletId, createdAt: tx.date || now }));
+        data = { wallets: [...(data.wallets || []), stationWallet], transactions: [...(data.transactions || []), ...importedTransactions], categories: data.categories || [], reconciliations: data.reconciliations || [], lastUpdated: now };
+        await db.saveData(data);
+        localStorage.setItem(stationImportKey, '1');
+      }
       // Check lockout expiration on init
       const storedLockout = localStorage.getItem('muhafiz_lockout');
       let currentLockout = storedLockout ? parseInt(storedLockout) : null;
