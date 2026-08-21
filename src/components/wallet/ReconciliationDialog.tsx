@@ -22,7 +22,7 @@ export function ReconciliationDialog({ open, onOpenChange, wallet }: Reconciliat
   const handleReconcile = async () => {
     const balance = parseFloat(newBalance);
     if (isNaN(balance)) {
-      toast.error('الر��اء إدخال رصيد صحيح');
+      toast.error('الراء إدخال رصيد صحيح');
       return;
     }
     setIsLoading(true);
@@ -49,7 +49,7 @@ export function ReconciliationDialog({ open, onOpenChange, wallet }: Reconciliat
             تصفية العُهدة مع المحاسب
           </DialogTitle>
           <DialogDescription className="text-right text-slate-500">
-            سيتم تسجيل الر��يد الحالي ({wallet.balance.toLocaleString()}) كرصيد تصفية، وتحديث رصيد المحف��ة للقيمة الجديدة.
+            سيتم تسجيل الريد الحالي ({wallet.balance.toLocaleString()}) كرصيد تصفية، وتحديث رصيد المحفة للقيمة الجديدة.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -57,7 +57,7 @@ export function ReconciliationDialog({ open, onOpenChange, wallet }: Reconciliat
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-800">
               <p className="font-bold mb-1">تنبيه هام</p>
-              <p>هذه العملية ستقوم بإنشاء معامل�� "تصفية" آلية لضبط الرصيد. لا يمكن التراجع عن هذه العملية بسهولة.</p>
+              <p>هذه العملية ستقوم بإنشاء معامل "تصفية" آلية لضبط الرصيد. لا يمكن التراجع عن هذه العملية بسهولة.</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -96,7 +96,7 @@ export function ReconciliationDialog({ open, onOpenChange, wallet }: Reconciliat
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl"
           >
-            {isLoading ? 'جاري ��لتصفية...' : 'تأكيد التصفية'}
+            {isLoading ? 'جاري لتصفية...' : 'تأكيد التصفية'}
           </Button>
         </DialogFooter>
       </DialogContent>

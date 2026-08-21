@@ -2,7 +2,7 @@ import { z } from 'zod';
 export const LoginSchema = z.object({
   pin: z.string()
     .min(4, { message: "كلمة المرور يجب أن تكون 4 أرقام على الأقل" })
-    .regex(/^\d+$/, { message: "كلمة المرور يجب أن تحتوي على ��رقام فقط" })
+    .regex(/^\d+$/, { message: "كلمة المرور يجب أن تحتوي على رقام فقط" })
 });
 export const WalletSchema = z.object({
   name: z.string()
@@ -21,7 +21,7 @@ export const TransactionSchema = z.object({
   amount: z.number()
     .positive({ message: "المبلغ يجب أن يكون أكبر من صفر" }),
   notes: z.string()
-    .max(100, { message: "الملاحظات طويلة جداً (ال��د الأقصى 100 حرف)" })
+    .max(100, { message: "الملاحظات طويلة جداً (الد الأقصى 100 حرف)" })
     .optional(),
   date: z.date()
 });

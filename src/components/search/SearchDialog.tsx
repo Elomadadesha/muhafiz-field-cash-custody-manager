@@ -86,7 +86,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                             <Wallet className="w-3 h-3" />
                             {wallet?.name}
                           </span>
-                          <span>���</span>
+                          <span>•</span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {format(tx.date, 'd MMM', { locale: arSA })}

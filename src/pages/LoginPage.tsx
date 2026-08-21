@@ -54,13 +54,13 @@ export function LoginPage() {
     try {
       const success = await login(pin);
       if (success) {
-        toast.success('تم ��سجيل الدخول بنجاح');
+        toast.success('تم سجيل الدخول بنجاح');
         navigate('/dashboard');
       } else {
         if (useAppStore.getState().lockoutUntil) {
           toast.error('تم قفل المحاولات مؤقتاً');
         } else {
-          toast.error('كلمة المرور غير ص��يحة');
+          toast.error('كلمة المرور غير صيحة');
         }
         setPin('');
       }

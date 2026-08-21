@@ -131,7 +131,7 @@ export function TransactionDrawer() {
     // Handle Transfer
     if (type === 'transfer') {
       if (!toWalletId) {
-        toast.error('الرجاء اختيار المحفظة المحول إلي��ا');
+        toast.error('الرجاء اختيار المحفظة المحول إليا');
         return;
       }
       if (walletId === toWalletId) {
@@ -149,7 +149,7 @@ export function TransactionDrawer() {
         toast.success('تم تحويل الأموال بنجاح');
         closeDrawer();
       } catch (error: any) {
-        toast.error(error.message || 'فشل عملي�� التحويل');
+        toast.error(error.message || 'فشل عملي التحويل');
       }
       return;
     }
@@ -168,7 +168,7 @@ export function TransactionDrawer() {
           // Add to permanent list
           const newId = await addCategory(customCategoryName.trim());
           if (!newId) {
-            toast.error('��شل إضافة البند الجديد');
+            toast.error('شل إضافة البند الجديد');
             return;
           }
           finalCategoryId = newId;
@@ -197,7 +197,7 @@ export function TransactionDrawer() {
       };
       if (drawerMode === 'edit' && transactionIdToEdit) {
         await editTransaction(transactionIdToEdit, txData);
-        toast.success('تم تعديل ال��ملية بنجاح');
+        toast.success('تم تعديل الملية بنجاح');
       } else {
         // Create (Add) or Duplicate (Add new based on old)
         await addTransaction(txData);
@@ -205,7 +205,7 @@ export function TransactionDrawer() {
       }
       closeDrawer();
     } catch (error) {
-      toast.error('حدث خطأ أثن��ء حفظ العملية');
+      toast.error('حدث خطأ أثنء حفظ العملية');
     }
   };
   const handleCategorySelect = (id: string) => {
@@ -223,17 +223,17 @@ export function TransactionDrawer() {
   };
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && closeDrawer()}>
-      <DrawerContent className="max-h-[95vh]" dir="rtl">
-        <div className="mx-auto w-full max-w-md">
-          <DrawerHeader>
+      <DrawerContent className="max-h-[92vh] overflow-hidden rounded-t-3xl" dir="rtl">
+        <div className="mx-auto flex w-full max-w-md min-w-0 flex-col">
+          <DrawerHeader className="shrink-0 px-5 pb-3 pt-5">
             <DrawerTitle className="text-center text-xl font-bold">
               {getTitle()}
             </DrawerTitle>
             <DrawerDescription className="text-center text-slate-500">
-              {drawerMode === 'edit' ? 'قم ��تعديل تفاصيل العملية أدناه' : '��دخل تفاصيل العملية المالية أدناه'}
+              {drawerMode === 'edit' ? 'قم بتعديل تفاصيل العملية أدناه' : 'أدخل تفاصيل العملية المالية أدناه'}
             </DrawerDescription>
           </DrawerHeader>
-          <div className="p-4 space-y-6 overflow-y-auto max-h-[75vh]">
+          <div className="min-h-0 space-y-5 overflow-y-auto px-4 pb-2 pt-2">
             {/* Type Toggle */}
             <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl">
               <button
@@ -333,13 +333,13 @@ export function TransactionDrawer() {
             {type === 'expense' && (
               <div className="space-y-3 animate-fade-in">
                 <Label className="text-right block text-slate-500">بند الصرف</Label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {categories.map(cat => (
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat.id)}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
+                        "flex min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all active:scale-95",
                         categoryId === cat.id && !isCustomCategory
                           ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
                           : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
@@ -351,14 +351,14 @@ export function TransactionDrawer() {
                       )}>
                         {getCategoryIcon(cat.name)}
                       </div>
-                      <span className="text-xs font-medium truncate w-full text-center">{cat.name}</span>
+                      <span className="w-full break-words text-center text-xs font-medium leading-5">{cat.name}</span>
                     </button>
                   ))}
                   {/* Other / Custom Category Button */}
                   <button
                     onClick={handleCustomCategorySelect}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border transition-all active:scale-95",
+                      "flex min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all active:scale-95",
                       isCustomCategory
                         ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-slate-200"
@@ -370,7 +370,7 @@ export function TransactionDrawer() {
                     )}>
                       <PenLine className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-medium truncate w-full text-center">أخرى / مخصص</span>
+                    <span className="w-full break-words text-center text-xs font-medium leading-5">أخرى / مخصص</span>
                   </button>
                 </div>
                 {/* Custom Category Input Area */}
@@ -437,7 +437,7 @@ export function TransactionDrawer() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="أضف تفا��يل..."
+                  placeholder="أضف تفاصيل..."
                   className="h-14 rounded-xl border-slate-200 dark:border-slate-700 text-right bg-white dark:bg-slate-800"
                 />
               </div>

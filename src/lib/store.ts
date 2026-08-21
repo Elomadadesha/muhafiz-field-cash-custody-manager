@@ -117,7 +117,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error('Init failed:', err);
       set({
         isLoading: false,
-        error: 'فشل تحم��ل البيانات. يرجى تحديث الصفحة.',
+        error: 'فشل تحمل البيانات. يرجى تحديث الصفحة.',
         wallets: [],
         transactions: [],
         categories: [],

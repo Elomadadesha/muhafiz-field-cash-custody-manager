@@ -134,7 +134,7 @@ export function SettingsPage() {
     const low = parseFloat(lowThreshold);
     const medium = parseFloat(mediumThreshold);
     if (isNaN(low) || isNaN(medium)) {
-      toast.error('الرجاء إدخال قيم ��حيحة');
+      toast.error('الرجاء إدخال قيم حيحة');
       return;
     }
     if (low >= medium) {
@@ -148,7 +148,7 @@ export function SettingsPage() {
   };
   // --- Auth/System Handlers ---
   const handleLogout = () => {
-    if (confirm('هل تريد تس��يل الخروج؟')) {
+    if (confirm('هل تريد تسيل الخروج؟')) {
       logout();
       navigate('/login');
     }
@@ -176,7 +176,7 @@ export function SettingsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('تم تصدير النسخة الاحتياطي�� بنجاح');
+      toast.success('تم تصدير النسخة الاحتياطي بنجاح');
       setIsBackupOpen(false);
       setBackupPassword('');
     } catch (error) {
@@ -255,10 +255,10 @@ export function SettingsPage() {
         <section>
           <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-4">
             <AlertTriangle className="w-5 h-5 text-amber-600" />
-            <h2>تنبيهات ال��صيد</h2>
+            <h2>تنبيهات الصيد</h2>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden p-4 space-y-4">
-            <p className="text-xs text-slate-500">حدد مستويات الرصيد لت��يير لون المحفظة تلقائياً.</p>
+            <p className="text-xs text-slate-500">حدد مستويات الرصيد لتيير لون المحفظة تلقائياً.</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-right text-xs text-red-500">حد الخطر (أحمر)</Label>
@@ -330,7 +330,7 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">تصدير نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      قم بإنشاء ملف نسخة احتياطية مشفر لحفظ بياناتك ب��مان.
+                      قم بإنشاء ملف نسخة احتياطية مشفر لحفظ بياناتك بمان.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -350,7 +350,7 @@ export function SettingsPage() {
                   </div>
                   <DialogFooter>
                     <Button onClick={handleBackup} disabled={isLoading || !backupPassword} className="w-full bg-blue-600 h-12 rounded-xl">
-                      {isLoading ? 'جاري الت��دير...' : 'تصدير وحفظ'}
+                      {isLoading ? 'جاري التدير...' : 'تصدير وحفظ'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -367,12 +367,12 @@ export function SettingsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">استعادة نسخة احتياطية</DialogTitle>
                     <DialogDescription className="text-right text-slate-500">
-                      اختر ملف النسخة الاحتياطية و��دخل كلمة المرور لاسترجاع البيانات.
+                      اختر ملف النسخة الاحتياطية ودخل كلمة المرور لاسترجاع البيانات.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
-                      تنبيه: استعادة البيانات ستقوم باستبدال ��ميع البيانات الحالية!
+                      تنبيه: استعادة البيانات ستقوم باستبدال ميع البيانات الحالية!
                     </p>
                     <div className="space-y-2">
                       <Label className="text-right block">ملف النسخة الاحتياطية</Label>
@@ -422,7 +422,7 @@ export function SettingsPage() {
                 <DialogHeader>
                   <DialogTitle className="text-right">إضافة بند صرف جديد</DialogTitle>
                   <DialogDescription className="text-right text-slate-500">
-                    أدخل اسم البند الجديد ل��ضافته إلى قائمة المصروفات.
+                    أدخل اسم البند الجديد لضافته إلى قائمة المصروفات.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -593,7 +593,7 @@ export function SettingsPage() {
             onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
-            تسجيل ال��روج
+            تسجيل الروج
           </Button>
         </section>
       </div>

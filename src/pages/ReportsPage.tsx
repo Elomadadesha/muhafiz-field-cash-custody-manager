@@ -102,13 +102,13 @@ export function ReportsPage() {
     } catch { if (navigator.share) await navigator.share({ title: 'تقرير محافظ العُهَد', text: reportText() }); else { await navigator.clipboard?.writeText(reportText()); toast.success('تم نسخ التقرير'); } }
     finally { setIsSharing(false); }
   };
-  const handleExport = () => { try { generateDailyTreasuryReport(filtered, wallets, range); toast.success('تم تصدير التقرير إلى Excel'); } catch { toast.error('تعذر تصدير التقرير'); } };
+  const handleExport = () => { try { generateDailyTreasuryReport(filtered, wallets, range); toast.success('تم تصدير التقرير بصيغة CSV المتوافقة مع Excel'); } catch { toast.error('تعذر تصدير التقرير'); } };
 
   return (
     <RtlWrapper>
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0d162b]/95 px-5 pb-4 pt-8 backdrop-blur">
         <div><h1 className="text-2xl font-extrabold text-white">التقارير</h1><p className="text-sm text-slate-400">تحليل وإحصائيات المحافظ والعُهَد</p></div>
-        <Button onClick={activeTab === 'general' ? handleShare : handleExport} disabled={isSharing} className="gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500">{activeTab === 'general' ? <><Share2 className="h-4 w-4" />مشاركة</> : <><FileSpreadsheet className="h-4 w-4" />تصدير Excel</>}</Button>
+        <Button onClick={activeTab === 'general' ? handleShare : handleExport} disabled={isSharing} className="gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500">{activeTab === 'general' ? <><Share2 className="h-4 w-4" />مشاركة</> : <><FileSpreadsheet className="h-4 w-4" />تصدير CSV</>}</Button>
       </header>
 
       <main className="flex-1 overflow-y-auto px-5 pb-28 pt-5">

@@ -11,6 +11,7 @@ import { TransactionDrawer } from '@/components/transaction/TransactionDrawer';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useAutoLock } from '@/hooks/use-auto-lock';
 import { isSecureContextAvailable } from '@/lib/security';
+import { App as CapacitorApp } from '@capacitor/app';
 // Auth Guard
 function ProtectedRoute() {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
@@ -80,11 +81,27 @@ const router = createBrowserRouter([
   }
 ]);
 export function App() {
+  const isDrawerOpen = useAppStore(s => s.isTransactionDrawerOpen);
+  const closeDrawer = useAppStore(s => s.closeTransactionDrawer);
+
+  useEffect(() => {
+    let handle: { remove: () => Promise<void> } | undefined;
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (useAppStore.getState().isTransactionDrawerOpen) {
+        closeDrawer();
+        return;
+      }
+      if (canGoBack) router.navigate(-1);
+      else CapacitorApp.exitApp();
+    }).then(listener => { handle = listener; });
+    return () => { handle?.remove(); };
+  }, [closeDrawer, isDrawerOpen]);
+
   useEffect(() => {
     // Check for security context on mount
     if (!isSecureContextAvailable()) {
       toast.warning(
-        "ميزات الأ��ان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).",
+        "ميزات الأان غير متوفرة. يرجى استخدام متصفح حديث واتصال آمن (HTTPS).",
         { duration: 10000 }
       );
     }

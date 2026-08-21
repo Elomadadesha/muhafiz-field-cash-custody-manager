@@ -83,7 +83,7 @@ export function WalletDetailPage() {
     return (
       <RtlWrapper className="justify-center items-center">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-900">المحفظة غير مو��ودة</h2>
+          <h2 className="text-xl font-bold text-slate-900">المحفظة غير موودة</h2>
           <Button onClick={() => navigate('/dashboard')} className="mt-4">عودة للرئيسية</Button>
         </div>
       </RtlWrapper>
@@ -97,7 +97,7 @@ export function WalletDetailPage() {
     return categories.find(c => c.id === tx.categoryId)?.name || 'غير محدد';
   };
   const handleDelete = async (txId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلق��ئياً.')) {
+    if (confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تحديث رصيد المحفظة تلقئياً.')) {
       await deleteTransaction(txId);
       toast.success('تم حذف العملية بنجاح');
     }
@@ -149,7 +149,7 @@ export function WalletDetailPage() {
           <div className="relative z-10">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-slate-400 text-sm font-medium mb-1">الرصيد ال��الي</p>
+                <p className="text-slate-400 text-sm font-medium mb-1">الرصيد الالي</p>
                 <div className="flex items-baseline gap-2">
                   <h2 className="text-4xl font-bold tabular-nums tracking-tight">{wallet.balance.toLocaleString()}</h2>
                   <span className="text-blue-300 font-medium text-lg">{currency.symbol}</span>

@@ -79,7 +79,7 @@ export async function encryptData(data: any, password: string): Promise<string> 
     return JSON.stringify(payload);
   } catch (error) {
     console.error("Encryption failed:", error);
-    throw new Error("فشل تشفير ال��يانات");
+    throw new Error("فشل تشفير اليانات");
   }
 }
 // Decrypt string to data object

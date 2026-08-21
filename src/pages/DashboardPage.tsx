@@ -65,7 +65,7 @@ export function DashboardPage() {
     setNewWalletName('');
     setNewWalletBalance('');
     setNewWalletBudget('');
-    toast.success('تم إضا��ة المحفظة بنجاح');
+    toast.success('تم إضاة المحفظة بنجاح');
   };
   return (
     <RtlWrapper>
@@ -76,7 +76,7 @@ export function DashboardPage() {
           <Logo size="sm" />
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-              {getTimeBasedGreeting('مصطف��')}
+              {getTimeBasedGreeting('مصطف')}
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {format(new Date(), 'EEEE، d MMMM', { locale: arSA })}

@@ -130,7 +130,7 @@ export function TransactionReceipt({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">المحفظة</span>
-                  <span className="font-medium text-slate-700">{wallet?.name || 'غي�� معروف'}</span>
+                  <span className="font-medium text-slate-700">{wallet?.name || 'غي معروف'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">البند / التصنيف</span>
