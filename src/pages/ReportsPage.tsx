@@ -134,9 +134,9 @@ export function ReportsPage() {
 
   return (
     <RtlWrapper>
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#0d162b]/95 px-5 pb-4 pt-8 backdrop-blur">
-        <div><h1 className="text-2xl font-extrabold text-white">التقارير</h1><p className="text-sm text-slate-400">تحليل وإحصائيات المحافظ والعُهَد</p></div>
-        <Button onClick={activeTab === 'general' ? handleShare : handleExport} disabled={isSharing} className="gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500">{activeTab === 'general' ? <><Share2 className="h-4 w-4" />مشاركة</> : <><FileSpreadsheet className="h-4 w-4" />تصدير CSV</>}</Button>
+      <header className="sticky top-0 z-10 flex flex-wrap items-start justify-between gap-3 border-b border-white/10 bg-[#0d162b]/95 px-4 pb-4 pt-8 backdrop-blur sm:px-5">
+        <div className="min-w-0 flex-1 text-right"><h1 className="break-words text-2xl font-extrabold leading-8 text-white">التقارير</h1><p className="break-words text-sm leading-6 text-slate-400">تحليل وإحصائيات المحافظ والعُهَد</p></div>
+        <Button onClick={activeTab === 'general' ? handleShare : handleExport} disabled={isSharing} className="shrink-0 gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500">{activeTab === 'general' ? <><Share2 className="h-4 w-4" />مشاركة</> : <><FileSpreadsheet className="h-4 w-4" />تصدير CSV</>}</Button>
       </header>
 
       <main className="flex-1 overflow-y-auto px-5 pb-28 pt-5">
@@ -147,13 +147,13 @@ export function ReportsPage() {
           <Button onClick={shareReportToWhatsApp} disabled={isSharing} className="h-11 gap-2 rounded-2xl bg-[#25D366] px-3 text-xs text-white hover:bg-[#1da851]"><Share2 className="h-4 w-4" /><span>واتساب</span></Button>
         </div>
 
-        <div className="mb-3 grid grid-cols-5 gap-1 rounded-2xl bg-[#1b2940] p-1">
+        <div className="mb-3 grid grid-cols-2 gap-1 rounded-2xl bg-[#1b2940] p-1 sm:grid-cols-5">
           {[['today','اليوم'],['week','الأسبوع'],['month','الشهر'],['all','الكل'],['custom','مخصص']].map(([id, label]) => <button key={id} onClick={() => setRange(id as TimeRange)} className={cn('rounded-xl px-2 py-2 text-xs font-bold transition', range === id ? 'bg-[#3a4a60] text-white shadow' : 'text-slate-400')}>{label}</button>)}
         </div>
         <button onClick={() => setAdvanced(v => !v)} className="mb-4 flex w-full items-center justify-end gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-400"><Search className="h-4 w-4" /> بحث متقدم <span className="mr-auto text-blue-400">{advanced ? 'إخفاء' : 'فتح'}</span></button>
         {advanced && <div className="mb-5 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#18243a] p-4"><label className="text-xs text-slate-400">من<input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setRange('custom'); }} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d162b] p-2 text-white" /></label><label className="text-xs text-slate-400">إلى<input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setRange('custom'); }} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d162b] p-2 text-white" /></label></div>}
 
-        <div className="mb-6 grid grid-cols-4 gap-1 rounded-3xl bg-[#1b2940] p-2">
+        <div className="mb-6 grid grid-cols-2 gap-1 rounded-3xl bg-[#1b2940] p-2 sm:grid-cols-4">
           {([['categories','تصنيفات'],['treasury','خزينة'],['analysis','تحليل'],['general','عام']] as [ReportTab,string][]).map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={cn('rounded-2xl py-3 text-sm font-bold', activeTab === id ? 'bg-[#0d162b] text-white shadow' : 'text-slate-400')}>{label}</button>)}
         </div>
 

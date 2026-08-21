@@ -1,39 +1,43 @@
+import type { ReactNode } from 'react';
 import { Home, PlusCircle, FileText, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/store';
+
+function NavItem({ to, active, label, children }: { to: string; active: boolean; label: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'flex min-w-0 flex-col items-center justify-end gap-1 rounded-xl px-1 py-1 text-center transition-colors',
+        active ? 'text-blue-400' : 'text-slate-400 hover:text-slate-200'
+      )}
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center">{children}</span>
+      <span className="w-full truncate text-[11px] font-semibold leading-5 sm:text-xs">{label}</span>
+    </Link>
+  );
+}
+
 export function BottomNav() {
   const location = useLocation();
-  const path = location.pathname;
-  const isActive = (p: string) => path === p;
   const openTransactionDrawer = useAppStore(s => s.openTransactionDrawer);
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-safe pt-2 px-6 h-20 z-50">
-      <div className="flex items-center justify-between h-full pb-2 relative">
-        <Link to="/dashboard" className={cn("flex flex-col items-center gap-1 transition-colors w-16", isActive('/dashboard') ? "text-primary" : "text-slate-400 hover:text-slate-600")}>
-          <Home className="w-6 h-6" />
-          <span className="text-xs font-medium">الرئيسية</span>
-        </Link>
-        <Link to="/reports" className={cn("flex flex-col items-center gap-1 transition-colors w-16", isActive('/reports') ? "text-primary" : "text-slate-400 hover:text-slate-600")}>
-          <FileText className="w-6 h-6" />
-          <span className="text-xs font-medium">التقارير</span>
-        </Link>
-        {/* FAB - Perfectly Centered */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-8">
-          <button
-            onClick={() => openTransactionDrawer()}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg shadow-blue-500/30 transition-transform active:scale-95 border-4 border-slate-50 dark:border-slate-950"
-          >
-            <PlusCircle className="w-8 h-8" />
-          </button>
-        </div>
-        {/* Spacer for FAB */}
-        <div className="w-16"></div>
-        <Link to="/settings" className={cn("flex flex-col items-center gap-1 transition-colors w-16", isActive('/settings') ? "text-primary" : "text-slate-400 hover:text-slate-600")}>
-          <Settings className="w-6 h-6" />
-          <span className="text-xs font-medium">الإعدادات</span>
-        </Link>
+    <nav className="sticky bottom-0 z-50 h-[88px] shrink-0 border-t border-white/10 bg-[#0d162b]/95 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(2,8,23,0.28)] backdrop-blur-md" dir="rtl">
+      <div className="relative mx-auto grid h-full max-w-md grid-cols-4 items-end gap-1">
+        <NavItem to="/dashboard" active={location.pathname === '/dashboard'} label="الرئيسية"><Home className="h-6 w-6" /></NavItem>
+        <NavItem to="/reports" active={location.pathname === '/reports'} label="التقارير"><FileText className="h-6 w-6" /></NavItem>
+        <div aria-hidden="true" className="h-full" />
+        <NavItem to="/settings" active={location.pathname === '/settings'} label="الإعدادات"><Settings className="h-6 w-6" /></NavItem>
+        <button
+          type="button"
+          aria-label="إضافة عملية جديدة"
+          onClick={() => openTransactionDrawer()}
+          className="absolute bottom-5 left-1/2 flex h-[66px] w-[66px] -translate-x-1/2 items-center justify-center rounded-full border-[5px] border-[#0d162b] bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.45)] transition-transform hover:bg-blue-500 active:scale-95"
+        >
+          <PlusCircle className="h-9 w-9" strokeWidth={1.8} />
+        </button>
       </div>
-    </div>
+    </nav>
   );
 }
