@@ -28,6 +28,7 @@ interface AppState {
   init: () => Promise<void>;
   // Auth Actions
   setupApp: (password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   login: (password: string) => Promise<boolean>;
   logout: () => void;
   lockApp: () => void;
@@ -136,6 +137,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isLoading: false, error: 'فشل إعداد التطبيق' });
       throw err;
     }
+  },
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const storedHash = await db.getPasswordHash();
+    const currentHash = await hashPassword(currentPassword);
+    if (!storedHash || storedHash !== currentHash) return false;
+    await db.setPasswordHash(await hashPassword(newPassword));
+    return true;
   },
   login: async (password: string) => {
     const state = get();

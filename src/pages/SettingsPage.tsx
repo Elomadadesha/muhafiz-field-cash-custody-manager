@@ -29,6 +29,7 @@ export function SettingsPage() {
   const renameWallet = useAppStore(s => s.renameWallet);
   const toggleWalletStatus = useAppStore(s => s.toggleWalletStatus);
   const updateSettings = useAppStore(s => s.updateSettings);
+  const changePassword = useAppStore(s => s.changePassword);
   const restoreData = useAppStore(s => s.restoreData);
   const logout = useAppStore(s => s.logout);
   const navigate = useNavigate();
@@ -53,6 +54,10 @@ export function SettingsPage() {
   // Threshold State
   const [lowThreshold, setLowThreshold] = useState(settings.balanceThresholds?.low.toString() || '100');
   const [mediumThreshold, setMediumThreshold] = useState(settings.balanceThresholds?.medium.toString() || '500');
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   // --- Category Handlers ---
   const handleAddCategory = async () => {
     const validation = CategorySchema.safeParse({ name: newCategoryName });
@@ -151,6 +156,20 @@ export function SettingsPage() {
     toast.success('تم تحديث إعدادات التنبيه');
   };
   // --- Auth/System Handlers ---
+  const handleChangePassword = async () => {
+    if (newPassword.length < 4 || newPassword !== confirmNewPassword) {
+      toast.error('تحقق من كلمة المرور الجديدة وتطابق التأكيد');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const ok = await changePassword(currentPassword, newPassword);
+      if (!ok) { toast.error('كلمة المرور الحالية غير صحيحة'); return; }
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      setIsPasswordOpen(false); setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('');
+    } catch { toast.error('تعذر تغيير كلمة المرور'); }
+    finally { setIsLoading(false); }
+  };
   const handleLogout = () => {
     if (confirm('هل تريد تسيل الخروج؟')) {
       logout();
@@ -427,6 +446,15 @@ export function SettingsPage() {
                 </DialogContent>
               </Dialog>
             </div>
+          </div>
+        </section>
+        <section>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-800 p-4">
+            <div className="flex min-w-0 items-center gap-3"><Shield className="h-5 w-5 shrink-0 text-emerald-400" /><div className="min-w-0"><h2 className="break-words font-bold text-white">أمان الحساب</h2><p className="break-words text-sm leading-6 text-slate-400">غيّر كلمة المرور من وقت لآخر</p></div></div>
+            <Dialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen}>
+              <DialogTrigger asChild><Button variant="outline" className="shrink-0">تغيير كلمة المرور</Button></DialogTrigger>
+              <DialogContent dir="rtl"><DialogHeader><DialogTitle className="text-right">تغيير كلمة المرور</DialogTitle><DialogDescription className="text-right">أدخل كلمة المرور الحالية ثم اختر كلمة جديدة.</DialogDescription></DialogHeader><div className="space-y-3 py-4"><Input type="password" placeholder="كلمة المرور الحالية" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /><Input type="password" placeholder="كلمة المرور الجديدة" value={newPassword} onChange={e => setNewPassword(e.target.value)} /><Input type="password" placeholder="تأكيد كلمة المرور الجديدة" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} /></div><DialogFooter><Button onClick={handleChangePassword} disabled={isLoading} className="w-full bg-blue-600">حفظ كلمة المرور</Button></DialogFooter></DialogContent>
+            </Dialog>
           </div>
         </section>
         {/* Categories Section */}
